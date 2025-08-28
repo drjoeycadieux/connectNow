@@ -68,6 +68,9 @@ export default function Home() {
         </h1>
         <div className="flex items-center gap-4">
           <Button variant="ghost" asChild>
+            <Link href="/pricing">Pricing</Link>
+          </Button>
+          <Button variant="ghost" asChild>
             <Link href="/contact">Contact Support</Link>
           </Button>
           <Button variant="secondary" size="lg" asChild>
@@ -94,7 +97,7 @@ export default function Home() {
           </div>
           <div className="relative animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
              <Image 
-                src="https://picsum.photos/800/600"
+                src="https://picsum.photos/800/600?grayscale"
                 alt="IT professional providing remote support"
                 width={800}
                 height={600}
