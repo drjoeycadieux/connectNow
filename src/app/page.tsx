@@ -41,15 +41,15 @@ function OutageBanner() {
   }
 
   return (
-    <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 relative pr-10">
-      <AlertTriangle className="h-4 w-4" />
+    <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 relative pr-10 bg-red-600 text-white border-red-700">
+      <AlertTriangle className="h-4 w-4 text-white" />
       <AlertTitle className="font-bold">Platform Temporarily Unavailable</AlertTitle>
       <AlertDescription>
         We are currently experiencing technical difficulties and are working to resolve the issue. Thank you for your patience.
       </AlertDescription>
        <button
           onClick={() => setIsVisible(false)}
-          className="absolute top-1/2 right-3 -translate-y-1/2 text-destructive-foreground/70 hover:text-destructive-foreground"
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-white/70 hover:text-white"
           aria-label="Dismiss banner"
         >
           <X className="h-5 w-5" />
