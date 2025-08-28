@@ -48,6 +48,8 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
     pc.current.clear();
     setRemoteStreams(new Map());
 
+    if (!roomId) return;
+
     const roomRef = doc(db, 'rooms', roomId);
     const participantsQuery = query(collection(roomRef, 'participants'));
     const participantsSnapshot = await getDocs(participantsQuery);
@@ -62,6 +64,8 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
   }, [localStream, roomId, userId]);
 
   useEffect(() => {
+    if (!roomId) return;
+
     const start = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -101,7 +105,7 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
   }, [roomId, userId, localUserName, toast, router, cleanup]);
 
   useEffect(() => {
-    if (!localStream) return;
+    if (!localStream || !roomId) return;
 
     const roomRef = doc(db, 'rooms', roomId);
     const participantsQuery = query(collection(roomRef, 'participants'));
@@ -260,7 +264,7 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
   }, [isScreenSharing, localStream]);
   
   const sendMessage = useCallback(async (message: string) => {
-    if (!message.trim()) return;
+    if (!message.trim() || !roomId) return;
     await addDoc(collection(db, 'rooms', roomId, 'messages'), {
       userId,
       name: localUserName,
