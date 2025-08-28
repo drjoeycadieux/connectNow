@@ -11,16 +11,26 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-const features = [
-  "Unlimited Meetings",
+const monthlyFeatures = [
   "Up to 10 Participants",
   "End-to-End Encryption",
   "High-Quality Video & Audio",
   "Screen Sharing",
   "Secure Chat",
-  "Priority Email Support"
+  "Standard Email Support",
 ];
+
+const yearlyFeatures = [
+  "Everything in Monthly, plus:",
+  "Unlimited Meetings",
+  "Up to 50 Participants",
+  "24/7 Priority Support",
+  "Audit Logs & Compliance",
+  "Dedicated Onboarding",
+];
+
 
 export default function PricingPage() {
   const router = useRouter();
@@ -70,10 +80,10 @@ export default function PricingPage() {
           <div className="text-center mb-16">
             <h2 className="font-headline text-5xl md:text-6xl font-bold">Simple, transparent pricing</h2>
             <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-              Choose the plan that's right for you. No hidden fees.
+              Choose the plan that's right for your team. No hidden fees.
             </p>
           </div>
-          <div className="flex flex-col lg:flex-row justify-center items-center gap-8">
+          <div className="flex flex-col lg:flex-row justify-center items-start gap-8">
             <Card className="w-full max-w-md shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Monthly</CardTitle>
@@ -84,7 +94,7 @@ export default function PricingPage() {
                   $19 <span className="text-lg font-medium text-muted-foreground">/ month</span>
                 </div>
                 <ul className="space-y-3 text-muted-foreground">
-                  {features.map((feature) => (
+                  {monthlyFeatures.map((feature) => (
                     <li key={feature} className="flex items-center gap-3">
                       <Check className="h-5 w-5 text-primary" />
                       <span>{feature}</span>
@@ -103,17 +113,17 @@ export default function PricingPage() {
                <Badge variant="secondary" className="absolute top-4 right-4 bg-primary text-primary-foreground">Best Value</Badge>
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Yearly</CardTitle>
-                <CardDescription>Save over 12% with our annual plan.</CardDescription>
+                <CardDescription>Save over 12% and unlock premium features.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="text-5xl font-bold">
                   $199 <span className="text-lg font-medium text-muted-foreground">/ year</span>
                 </div>
                  <ul className="space-y-3 text-muted-foreground">
-                  {features.map((feature) => (
+                  {yearlyFeatures.map((feature, index) => (
                     <li key={feature} className="flex items-center gap-3">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{feature}</span>
+                      <Check className={cn("h-5 w-5 text-primary", index === 0 && "opacity-0")} />
+                      <span className={cn(index === 0 && "font-bold text-foreground")}>{feature}</span>
                     </li>
                   ))}
                 </ul>
