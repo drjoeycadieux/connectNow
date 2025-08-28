@@ -36,16 +36,24 @@ export default function ProfilePage() {
   }, [router]);
 
   const handleUpdateProfile = async () => {
-    if (!user) return;
+    if (!user || displayName.trim() === '') {
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Display name cannot be empty.',
+        });
+        return;
+    }
     setSaving(true);
     try {
-      await updateProfile(user, { displayName });
+      await updateProfile(auth.currentUser!, { displayName });
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, { displayName });
       toast({
         title: 'Success',
         description: 'Your profile has been updated.',
       });
+      // The onAuthStateChanged listener will handle updating the user state
     } catch (error: any) {
       toast({
         variant: 'destructive',
