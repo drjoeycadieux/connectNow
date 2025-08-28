@@ -66,9 +66,14 @@ export default function Home() {
         <h1 className="font-headline text-3xl font-bold text-primary">
           <Link href="/">Connect Now</Link>
         </h1>
-        <Button variant="secondary" size="lg" asChild>
-          <a href="#join">Get Started</a>
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" asChild>
+            <Link href="/contact">Contact Support</Link>
+          </Button>
+          <Button variant="secondary" size="lg" asChild>
+            <a href="#join">Get Started</a>
+          </Button>
+        </div>
       </header>
 
       <main className="flex-1 relative">
