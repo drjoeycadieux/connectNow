@@ -14,6 +14,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
+import { UserProfile } from '@/components/connect-now/UserProfile';
 
 
 function JoinRoomFormSkeleton() {
@@ -73,9 +74,7 @@ export default function Home() {
           <Button variant="ghost" asChild>
             <Link href="/contact">Contact Support</Link>
           </Button>
-          <Button variant="secondary" size="lg" asChild>
-            <a href="#join">Get Started</a>
-          </Button>
+          <UserProfile />
         </div>
       </header>
 
@@ -97,7 +96,7 @@ export default function Home() {
           </div>
           <div className="relative animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
              <Image 
-                src="https://picsum.photos/800/600?grayscale"
+                src="https://picsum.photos/800/600"
                 alt="IT professional providing remote support"
                 width={800}
                 height={600}

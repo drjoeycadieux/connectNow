@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 const formSchema = z.object({
   name: z.string().trim().min(2, { message: 'Your name must be at least 2 characters.' }),
@@ -27,6 +29,19 @@ const formSchema = z.object({
 export function CreateRoomForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const auth = getAuth();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        form.setValue('name', currentUser.displayName || currentUser.email?.split('@')[0] || '');
+      }
+    });
+    return () => unsubscribe();
+  }, [auth]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -36,16 +51,28 @@ export function CreateRoomForm() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+      router.push('/auth');
+      return;
+    }
     const roomId = crypto.randomUUID();
     const topicQuery = values.topic ? `&topic=${encodeURIComponent(values.topic)}` : '';
     router.push(`/room/${roomId}?name=${encodeURIComponent(values.name)}${topicQuery}`);
     setOpen(false);
   }
 
+  const handleTriggerClick = () => {
+    if (!user) {
+      router.push('/auth');
+    } else {
+      setOpen(true);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="w-full text-base">
+        <Button size="lg" className="w-full text-base" onClick={handleTriggerClick}>
           <Video className="mr-2 h-5 w-5" />
           Create New Meeting
         </Button>

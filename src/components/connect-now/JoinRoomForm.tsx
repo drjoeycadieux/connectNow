@@ -1,10 +1,12 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -19,6 +21,18 @@ const formSchema = z.object({
 export function JoinRoomForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [user, setUser] = useState<User | null>(null);
+  const auth = getAuth();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        form.setValue('name', currentUser.displayName || currentUser.email?.split('@')[0] || '');
+      }
+    });
+    return () => unsubscribe();
+  }, [auth]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,6 +51,10 @@ export function JoinRoomForm() {
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+        router.push(`/auth?joinRoomId=${values.roomId}`);
+        return;
+    }
     router.push(`/room/${values.roomId}?name=${encodeURIComponent(values.name)}`);
   }
 
