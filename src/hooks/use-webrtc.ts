@@ -1,7 +1,7 @@
 
 'use client';
 
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import type { ChatMessage } from '@/types';
 import {
   addDoc,
@@ -22,6 +22,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from './use-toast';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const servers = {
   iceServers: [
@@ -44,13 +45,26 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   
   const pcs = useRef<Map<string, RTCPeerConnection>>(new Map());
-  const userId = useMemo(() => crypto.randomUUID(), []);
+  const userId = useMemo(() => user?.uid || crypto.randomUUID(), [user]);
   const { toast } = useToast();
   const router = useRouter();
   const originalVideoTrack = useRef<MediaStreamTrack | null>(null);
   const audioTrackRef = useRef<MediaStreamTrack | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        router.push(`/auth?joinRoomId=${roomId}`);
+      }
+    });
+    return () => unsubscribe();
+  }, [roomId, router]);
+
 
   const hangUp = useCallback(async () => {
     if (!roomId) {
@@ -172,7 +186,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
 
   useEffect(() => {
-    if (!roomId || !localUserName) return;
+    if (!roomId || !localUserName || !user) return;
     
     let isMounted = true;
     const startMedia = async () => {
@@ -201,7 +215,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     return () => {
       isMounted = false;
     };
-  }, [roomId, localUserName, toast]);
+  }, [roomId, localUserName, toast, user]);
 
    useEffect(() => {
     if (!roomId) return;
@@ -216,7 +230,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
   // Main WebRTC Logic
   useEffect(() => {
-    if (!localStream || !roomId) return;
+    if (!localStream || !roomId || !user) return;
 
     const roomRef = doc(db, 'rooms', roomId);
 
@@ -368,7 +382,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       window.removeEventListener('beforeunload', beforeUnloadHandler);
       hangUp();
     };
-  }, [localStream, roomId, userId, localUserName, hangUp]);
+  }, [localStream, roomId, userId, localUserName, hangUp, user]);
   
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim() || !roomId) return;

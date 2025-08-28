@@ -2,8 +2,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,7 +21,6 @@ import { Skeleton } from '../ui/skeleton';
 export function UserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const auth = getAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function UserProfile() {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);

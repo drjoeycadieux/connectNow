@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const formSchema = z.object({
   name: z.string().trim().min(2, { message: 'Your name must be at least 2 characters.' }),
@@ -30,8 +31,7 @@ export function CreateRoomForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const auth = getAuth();
-
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -40,7 +40,7 @@ export function CreateRoomForm() {
       }
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
