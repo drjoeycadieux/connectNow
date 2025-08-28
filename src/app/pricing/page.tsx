@@ -27,6 +27,7 @@ const yearlyFeatures = [
   "Everything in Monthly, plus:",
   "Unlimited Meetings",
   "Up to 50 Participants",
+  "Custom Domain",
   "24/7 Priority Support",
   "Audit Logs & Compliance",
   "Dedicated Onboarding",
@@ -63,8 +64,8 @@ export default function PricingPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create checkout session.');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create checkout session.');
       }
 
       const { url } = await response.json();
