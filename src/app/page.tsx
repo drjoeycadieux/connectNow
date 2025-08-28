@@ -6,6 +6,25 @@ import { Separator } from "@/components/ui/separator";
 import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+
+function JoinRoomFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+      <Skeleton className="h-11 w-full" />
+    </div>
+  )
+}
 
 export default function Home() {
   return (
@@ -205,7 +224,9 @@ export default function Home() {
                   <span className="text-sm font-medium text-muted-foreground">OR</span>
                   <Separator className="flex-1" />
                 </div>
-                <JoinRoomForm />
+                <Suspense fallback={<JoinRoomFormSkeleton/>}>
+                  <JoinRoomForm />
+                </Suspense>
               </CardContent>
             </Card>
           </div>
@@ -226,3 +247,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
