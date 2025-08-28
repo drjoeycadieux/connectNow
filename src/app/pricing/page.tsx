@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const monthlyFeatures = [
-  "Up to 10 Participants",
+  "Up to 5 Participants",
   "End-to-End Encryption",
   "High-Quality Video & Audio",
   "Screen Sharing",
