@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,11 @@ export default function AuthPage() {
       if (action === 'signup') {
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        const displayName = user.email?.split('@')[0] || 'User';
+        await updateProfile(user, { displayName });
         await setDoc(doc(db, 'users', user.uid), {
           email: user.email,
-          displayName: user.email?.split('@')[0],
+          displayName: displayName,
           createdAt: new Date(),
         });
       } else {
