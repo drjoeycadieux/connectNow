@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CreateRoomButton } from "@/components/connect-now/CreateRoomButton";
 import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
-import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive } from "lucide-react";
+import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset } from "lucide-react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -150,64 +150,45 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="testimonials" className="py-16 md:py-24 bg-secondary/50">
+        <section id="why-us" className="py-16 md:py-24 bg-secondary/50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h3 className="font-headline text-4xl md:text-5xl font-bold">Trusted by IT Teams</h3>
+              <h3 className="font-headline text-4xl md:text-5xl font-bold">Why Connect Now?</h3>
               <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                Connect Now is the go-to solution for IT professionals who prioritize security and efficiency.
+                The enterprise-grade solution for secure and reliable IT communications.
               </p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className="bg-card p-6 border-0 shadow-lg">
-                <CardContent className="p-0">
-                  <p className="text-muted-foreground mb-4">"Connect Now has been a game-changer for our remote support. It's fast, secure, and so easy for our end-users. The stability during screen sharing is unmatched."</p>
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704e" alt="Jessica M." />
-                      <AvatarFallback>JM</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">Jessica M.</p>
-                      <p className="text-sm text-muted-foreground">IT Director</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card p-6 border-0 shadow-lg">
-                <CardContent className="p-0">
-                  <p className="text-muted-foreground mb-4">"For incident response, we need a tool that just works. We can spin up a call with our entire on-call team in seconds, no matter where they are. It's incredibly reliable."</p>
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Alex R." />
-                      <AvatarFallback>AR</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">Alex R.</p>
-                      <p className="text-sm text-muted-foreground">Systems Administrator</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card p-6 border-0 shadow-lg">
-                <CardContent className="p-0">
-                  <p className="text-muted-foreground mb-4">"The end-to-end encryption gives us peace of mind when discussing sensitive infrastructure. We evaluated several tools, and Connect Now was the clear winner for security."</p>
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704f" alt="David Chen" />
-                      <AvatarFallback>DC</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">David Chen</p>
-                      <p className="text-sm text-muted-foreground">Network Engineer</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="flex items-start gap-4">
+                <div className="bg-primary/10 text-primary p-3 rounded-full">
+                  <Server className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xl mb-1">Dedicated Infrastructure</h4>
+                  <p className="text-muted-foreground">Option for on-premise or private cloud deployment, ensuring data sovereignty and control.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-primary/10 text-primary p-3 rounded-full">
+                  <FileCheck2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xl mb-1">Compliance-Ready</h4>
+                  <p className="text-muted-foreground">Designed to meet strict regulatory requirements, including audit logs and data retention policies.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="bg-primary/10 text-primary p-3 rounded-full">
+                  <Headset className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xl mb-1">24/7 Priority Support</h4>
+                  <p className="text-muted-foreground">Get expert help whenever you need it with our dedicated enterprise support team.</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
-
 
         <section id="join" className="py-16 md:py-24">
           <div className="container mx-auto px-4 flex justify-center">
