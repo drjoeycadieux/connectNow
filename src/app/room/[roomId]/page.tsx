@@ -46,11 +46,16 @@ export default function RoomPage() {
   
   useEffect(() => {
     if (localStream) {
-      const hasVideo = localStream.getVideoTracks().length > 0;
-      const hasAudio = localStream.getAudioTracks().length > 0;
+      const videoTracks = localStream.getVideoTracks();
+      const audioTracks = localStream.getAudioTracks();
+      const hasVideo = videoTracks.length > 0 && videoTracks.every(t => t.readyState === 'live');
+      const hasAudio = audioTracks.length > 0 && audioTracks.every(t => t.readyState === 'live');
       setHasMediaPermissions(hasVideo && hasAudio);
+    } else if (nameSubmitted) {
+      // If there's no stream after submitting a name, it's likely a permission issue
+      setHasMediaPermissions(false);
     }
-  }, [localStream]);
+  }, [localStream, nameSubmitted]);
 
 
   const handleToggleScreenShare = () => {

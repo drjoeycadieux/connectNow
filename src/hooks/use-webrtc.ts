@@ -364,7 +364,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     return () => {
       unsubscribeRoom();
       window.removeEventListener('beforeunload', beforeUnloadHandler);
-      // hangUp(); // This can cause issues with component re-renders. Cleanup is handled by beforeunload and page navigation.
+      hangUp();
     };
   }, [localStream, roomId, userId, hangUp]);
   
@@ -400,5 +400,3 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     isSomeoneElseScreenSharing,
   };
 };
-
-    
