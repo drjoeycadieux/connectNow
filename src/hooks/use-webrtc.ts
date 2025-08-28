@@ -64,7 +64,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     if (roomDocSnap.exists()) {
         const participants = roomDocSnap.data().participants || [];
         if (participants.length <= 1) {
-            // If I'm the last one, delete the whole room
             const batch = writeBatch(db);
             
             const iceCandidatesCollectionRef = collection(roomRef, 'iceCandidates');
@@ -83,7 +82,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             await batch.commit();
 
         } else {
-            // Otherwise, just remove myself
             const updates: {[key:string]: any} = {
                 participants: participants.filter((pId: string) => pId !== userId),
             };
@@ -357,11 +355,18 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
     });
     
+    const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+        hangUp();
+        return null;
+    };
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+    
     return () => {
       unsubscribeRoom();
-      // Don't stop tracks here, hangUp will handle it.
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
+      // hangUp(); // This can cause issues with component re-renders. Cleanup is handled by beforeunload and page navigation.
     };
-  }, [localStream, roomId, userId]);
+  }, [localStream, roomId, userId, hangUp]);
   
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim() || !roomId) return;
@@ -395,3 +400,5 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     isSomeoneElseScreenSharing,
   };
 };
+
+    
