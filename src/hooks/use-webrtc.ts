@@ -16,6 +16,7 @@ import {
   writeBatch,
   getDocs,
   deleteField,
+  updateDoc,
 } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from './use-toast';
@@ -56,26 +57,35 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     setRemoteStreams(new Map());
   
     if (roomId) {
-      const roomRef = doc(db, 'rooms', roomId);
-      const roomDoc = await getDoc(roomRef);
-      if (roomDoc.exists()) {
-        const participants = roomDoc.data().participants || [];
-        if (participants.length === 1 && participants[0] === userId) {
-          // If I am the last one, delete the whole room
-          const messageDocs = await getDocs(collection(roomRef, 'messages'));
-          const batch = writeBatch(db);
-          messageDocs.forEach(d => batch.delete(d.ref));
-          batch.delete(roomRef);
-          await batch.commit();
-        } else {
-          // Otherwise, just remove myself
-          await setDoc(roomRef, {
-            participants: participants.filter((pId: string) => pId !== userId),
-            [`offers.${userId}`]: deleteField(),
-            [`answers.${userId}`]: deleteField(),
-          }, { merge: true });
+        const roomRef = doc(db, 'rooms', roomId);
+        const roomDocSnap = await getDoc(roomRef);
+
+        if (roomDocSnap.exists()) {
+            const participants = roomDocSnap.data().participants || [];
+            if (participants.length <= 1) {
+                // If I am the last one, delete the whole room and subcollections
+                const batch = writeBatch(db);
+                
+                const iceCandidatesRef = collection(roomRef, 'iceCandidates');
+                const iceCandidatesSnap = await getDocs(iceCandidatesRef);
+                iceCandidatesSnap.forEach(doc => batch.delete(doc.ref));
+
+                const messagesRef = collection(roomRef, 'messages');
+                const messagesSnap = await getDocs(messagesRef);
+                messagesSnap.forEach(doc => batch.delete(doc.ref));
+
+                batch.delete(roomRef);
+                await batch.commit();
+            } else {
+                // Otherwise, just remove myself
+                const updates: {[key:string]: any} = {
+                    participants: participants.filter((pId: string) => pId !== userId),
+                };
+                updates[`offers.${userId}`] = deleteField();
+                updates[`answers.${userId}`] = deleteField();
+                await updateDoc(roomRef, updates);
+            }
         }
-      }
     }
     
     router.push('/');
@@ -85,11 +95,14 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   useEffect(() => {
     if (!roomId || !localUserName) return;
     
+    let isMounted = true;
     const startMedia = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        originalVideoTrack.current = stream.getVideoTracks()[0].clone();
-        setLocalStream(stream);
+        if(isMounted) {
+            originalVideoTrack.current = stream.getVideoTracks()[0].clone();
+            setLocalStream(stream);
+        }
       } catch (error) {
         console.error('Error accessing media devices.', error);
         toast({
@@ -97,7 +110,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
           description: 'Could not access camera and microphone. Please check permissions.',
           variant: 'destructive',
         });
-        router.push('/');
+        if(isMounted) router.push('/');
       }
     };
 
@@ -106,7 +119,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     const chatQuery = query(collection(db, 'rooms', roomId, 'messages'), orderBy('timestamp'));
     const unsubscribeChat = onSnapshot(chatQuery, (snapshot) => {
       const messages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ChatMessage));
-      setChatMessages(messages);
+      if (isMounted) setChatMessages(messages);
     });
 
     const handleBeforeUnload = () => {
@@ -115,6 +128,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
+      isMounted = false;
       hangUp();
       unsubscribeChat();
       window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -129,16 +143,18 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     const roomRef = doc(db, 'rooms', roomId);
 
     const init = async () => {
-      const roomDoc = await getDoc(roomRef);
-      if (!roomDoc.exists()) {
-        await setDoc(roomRef, { participants: [userId], offers: {}, answers: {} });
-      } else {
-        const data = roomDoc.data();
-        await setDoc(roomRef, { participants: [...(data.participants || []), userId] }, { merge: true });
-      }
+        const roomDoc = await getDoc(roomRef);
+        if (!roomDoc.exists()) {
+            await setDoc(roomRef, { participants: [], offers: {}, answers: {} });
+        }
+        // Add self to participants
+        const participants = roomDoc.data()?.participants || [];
+        if (!participants.includes(userId)) {
+            await updateDoc(roomRef, { participants: [...participants, userId] });
+        }
     };
     init();
-    
+
     const createPeerConnection = (remoteUserId: string): RTCPeerConnection => {
         if (pcs.current.has(remoteUserId)) {
             return pcs.current.get(remoteUserId)!;
@@ -155,8 +171,8 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             setRemoteStreams(prev => new Map(prev).set(remoteUserId, event.streams[0]));
         };
 
-        const iceCandidatesCollection = collection(roomRef, 'iceCandidates', userId, 'candidates');
-        const remoteIceCandidatesCollection = collection(roomRef, 'iceCandidates', remoteUserId, 'candidates');
+        const localIceCandidatesCollection = collection(doc(collection(roomRef, 'iceCandidates'), userId), 'candidates');
+        const remoteIceCandidatesCollection = collection(doc(collection(roomRef, 'iceCandidates'), remoteUserId), 'candidates');
         
         pc.onicecandidate = (event) => {
             if (event.candidate) {
@@ -164,7 +180,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             }
         };
 
-        onSnapshot(iceCandidatesCollection, (snapshot) => {
+        const unsubscribeIce = onSnapshot(localIceCandidatesCollection, (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
                     await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
@@ -184,11 +200,11 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             });
           }
         };
-
+        
         return pc;
     };
 
-    const unsubscribe = onSnapshot(roomRef, async (snapshot) => {
+    const unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
         const data = snapshot.data();
         if (!data) return;
 
@@ -200,38 +216,48 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             const pc = createPeerConnection(remoteUserId);
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            await setDoc(roomRef, { offers: { [userId]: { type: offer.type, sdp: offer.sdp, to: remoteUserId } } }, { merge: true });
+            
+            const offerPayload = { [userId]: { type: offer.type, sdp: offer.sdp, to: remoteUserId } };
+            await updateDoc(roomRef, { offers: { ...data.offers, ...offerPayload } });
           }
         }
 
         // Handle offers for me
-        const myOffers = Object.entries(data.offers || {}).filter(([, offer]: any) => offer.to === userId);
-        for (const [offererId, offer]: [string, any] of myOffers) {
+        const offersForMe = Object.entries(data.offers || {}).filter(([, offer]: any) => offer.to === userId);
+        for (const [offererId, offer]: [string, any] of offersForMe) {
           const pc = createPeerConnection(offererId);
           if (pc.signalingState === 'stable') {
             await pc.setRemoteDescription(new RTCSessionDescription(offer));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            await setDoc(roomRef, { 
-              answers: { [userId]: { type: answer.type, sdp: answer.sdp, to: offererId } },
-              offers: { [offererId]: deleteField() }
-            }, { merge: true });
+            
+            const answerPayload = { [userId]: { type: answer.type, sdp: answer.sdp, to: offererId }};
+            const offerUpdate = { ...data.offers };
+            delete offerUpdate[offererId];
+
+            await updateDoc(roomRef, { 
+              answers: { ...data.answers, ...answerPayload },
+              offers: offerUpdate,
+            });
           }
         }
 
         // Handle answers for me
-        const myAnswers = Object.entries(data.answers || {}).filter(([, answer]: any) => answer.to === userId);
-        for (const [answererId, answer]: [string, any] of myAnswers) {
+        const answersForMe = Object.entries(data.answers || {}).filter(([, answer]: any) => answer.to === userId);
+        for (const [answererId, answer]: [string, any] of answersForMe) {
             const pc = pcs.current.get(answererId);
             if (pc && pc.signalingState === 'have-local-offer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                await setDoc(roomRef, { answers: { [answererId]: deleteField() } }, { merge: true });
+
+                const answerUpdate = { ...data.answers };
+                delete answerUpdate[answererId];
+                await updateDoc(roomRef, { answers: answerUpdate });
             }
         }
     });
 
     return () => {
-        unsubscribe();
+        unsubscribeRoom();
     };
   }, [localStream, roomId, userId]);
 
@@ -253,19 +279,26 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
   const toggleScreenSharing = useCallback(async () => {
     if (!localStream || !originalVideoTrack.current) return;
-
-    if (isScreenSharing) {
+  
+    const stopScreenShare = () => {
+      if (!localStream || !originalVideoTrack.current) return;
       const videoTrack = localStream.getVideoTracks()[0];
-      videoTrack.stop();
-      localStream.removeTrack(videoTrack);
-      localStream.addTrack(originalVideoTrack.current);
-
-      pcs.current.forEach(connection => {
-        const sender = connection.getSenders().find(s => s.track?.kind === 'video');
-        sender?.replaceTrack(originalVideoTrack.current);
-      });
-      originalVideoTrack.current = originalVideoTrack.current.clone();
-      setIsScreenSharing(false);
+      if (videoTrack.getSettings().displaySurface) {
+        videoTrack.stop();
+        localStream.removeTrack(videoTrack);
+        localStream.addTrack(originalVideoTrack.current);
+  
+        pcs.current.forEach(connection => {
+          const sender = connection.getSenders().find(s => s.track?.kind === 'video');
+          sender?.replaceTrack(originalVideoTrack.current);
+        });
+        originalVideoTrack.current = originalVideoTrack.current.clone();
+        setIsScreenSharing(false);
+      }
+    };
+  
+    if (isScreenSharing) {
+      stopScreenShare();
     } else {
       try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -275,29 +308,24 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         localStream.removeTrack(currentVideoTrack);
         localStream.addTrack(screenTrack);
         currentVideoTrack.stop();
-
+  
         pcs.current.forEach(connection => {
           const sender = connection.getSenders().find(s => s.track?.kind === 'video');
           sender?.replaceTrack(screenTrack);
         });
         setIsScreenSharing(true);
-
+  
         screenTrack.onended = () => {
-          // Check if we are still in screen sharing mode before toggling.
-          // The user might have already stopped it manually.
-          if (pcs.current.size > 0) { // a bit of a hack to check if we are still in a call
-            const currentVideoTrack = localStream.getVideoTracks()[0];
-            if (currentVideoTrack.getSettings().displaySurface) {
-               toggleScreenSharing();
-            }
-          }
+          stopScreenShare();
         };
       } catch(err) {
         console.error("Screen share failed: ", err);
         toast({ title: 'Screen Share Failed', description: 'Could not start screen sharing.', variant: 'destructive' });
+        // If screen share fails, revert to the original camera track
+        stopScreenShare();
       }
     }
-  }, [isScreenSharing, localStream, toast, toggleScreenSharing]);
+  }, [isScreenSharing, localStream, toast]);
   
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim() || !roomId) return;
