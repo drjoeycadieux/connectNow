@@ -72,7 +72,7 @@ export default function AuthPage() {
         });
       } else { // 'login' or 'team_login'
         if (action === 'team_login') {
-            if (email.toLowerCase() !== 'support@connectnow.com') {
+            if (email.toLowerCase() !== 'joeycadieux161@gmail.com') {
                 toast({
                     variant: 'destructive',
                     title: 'Access Denied',
@@ -132,7 +132,7 @@ export default function AuthPage() {
 
       toast({ title: 'Success', description: 'Successfully logged in with Google.' });
       router.push('/');
-    } catch (error: any) => {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
@@ -229,7 +229,7 @@ export default function AuthPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="team-email">Team Email</Label>
-                  <Input id="team-email" type="email" placeholder="support@connectnow.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input id="team-email" type="email" placeholder="joeycadieux161@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="team-password">Password</Label>
