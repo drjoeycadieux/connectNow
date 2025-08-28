@@ -10,9 +10,10 @@ import { ScreenShareWarningDialog } from '@/components/connect-now/ScreenShareWa
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Loader2, MessageSquare, Users } from 'lucide-react';
+import { Loader2, MessageSquare, Users, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function RoomPage() {
   const params = useParams();
@@ -20,6 +21,7 @@ export default function RoomPage() {
   const [localUserName, setLocalUserName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const { toast } = useToast();
   
   const {
     userId,
@@ -93,81 +95,96 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col bg-background">
-      <ScreenShareWarningDialog
-        open={showWarning}
-        onOpenChange={setShowWarning}
-        onConfirm={confirmScreenShare}
-      />
-      <header className="flex items-center justify-between border-b p-4">
-        <h1 className="font-headline text-2xl font-bold text-primary">Connect Now</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="h-5 w-5" />
-            <span>{remoteStreams.size + 1}</span>
+    <TooltipProvider>
+      <div className="flex h-screen w-full flex-col bg-background">
+        <ScreenShareWarningDialog
+          open={showWarning}
+          onOpenChange={setShowWarning}
+          onConfirm={confirmScreenShare}
+        />
+        <header className="flex items-center justify-between border-b p-4">
+          <h1 className="font-headline text-2xl font-bold text-primary">Connect Now</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="h-5 w-5" />
+              <span>{remoteStreams.size + 1}</span>
+            </div>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" onClick={() => {
+                  if (roomId) {
+                    navigator.clipboard.writeText(roomId);
+                    toast({
+                      title: "Room ID Copied!",
+                      description: "You can now share it with others.",
+                    });
+                  }
+                }}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Room ID
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{roomId}</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-          {!isMobile && (
-            <Button variant="outline" onClick={() => {
-              if (roomId) navigator.clipboard.writeText(roomId);
-            }}>
-              Room ID: {roomId}
-            </Button>
-          )}
-        </div>
-      </header>
+        </header>
 
-      <main className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col">
-          <div className="flex-1 overflow-auto p-4">
-            <div className={`grid gap-4 ${isScreenSharing || isSomeoneElseScreenSharing ? '' : 'grid-cols-1 md:grid-cols-2'}`}>
-                {isScreenSharing ? (
-                   <ParticipantVideo stream={localStream} name="Your Screen" isLocal isScreen />
-                ) : (
-                  <ParticipantVideo stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff} isMuted={isMuted} />
-                )}
-                {remoteStreamEntries.map(([id, stream]) => {
-                  const isScreen = stream.getVideoTracks().some(t => t.getSettings().displaySurface);
-                   return (
-                     <ParticipantVideo
-                       key={id}
-                       stream={stream}
-                       name={`Participant ${id.substring(0, 4)}`}
-                       isScreen={isScreen}
-                     />
-                   );
-                })}
+        <main className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 flex-col">
+            <div className="flex-1 overflow-auto p-4">
+              <div className={`grid gap-4 ${isScreenSharing || isSomeoneElseScreenSharing ? '' : 'grid-cols-1 md:grid-cols-2'}`}>
+                  {isScreenSharing ? (
+                     <ParticipantVideo stream={localStream} name="Your Screen" isLocal isScreen />
+                  ) : (
+                    <ParticipantVideo stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff} isMuted={isMuted} />
+                  )}
+                  {remoteStreamEntries.map(([id, stream]) => {
+                    const isScreen = stream.getVideoTracks().some(t => t.getSettings().displaySurface);
+                     return (
+                       <ParticipantVideo
+                         key={id}
+                         stream={stream}
+                         name={`Participant ${id.substring(0, 4)}`}
+                         isScreen={isScreen}
+                       />
+                     );
+                  })}
+              </div>
+            </div>
+            <div className="border-t bg-card/50 p-4">
+              <CallControls
+                isMuted={isMuted}
+                isCameraOff={isCameraOff}
+                isScreenSharing={isScreenSharing}
+                onToggleMute={toggleMute}
+                onToggleCamera={toggleCamera}
+                onToggleScreenShare={handleToggleScreenShare}
+                onHangUp={hangUp}
+              />
             </div>
           </div>
-          <div className="border-t bg-card/50 p-4">
-            <CallControls
-              isMuted={isMuted}
-              isCameraOff={isCameraOff}
-              isScreenSharing={isScreenSharing}
-              onToggleMute={toggleMute}
-              onToggleCamera={toggleCamera}
-              onToggleScreenShare={handleToggleScreenShare}
-              onHangUp={hangUp}
-            />
-          </div>
-        </div>
 
-        {isMobile ? (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button size="icon" className="fixed bottom-24 right-4 z-20 rounded-full h-14 w-14 shadow-lg">
-                <MessageSquare />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85%] p-0">
+          {isMobile ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button size="icon" className="fixed bottom-24 right-4 z-20 rounded-full h-14 w-14 shadow-lg">
+                  <MessageSquare />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[85%] p-0">
+                <ChatPanel messages={chatMessages} onSendMessage={sendMessage} localUserId={userId} />
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <aside className="w-[350px] border-l">
               <ChatPanel messages={chatMessages} onSendMessage={sendMessage} localUserId={userId} />
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <aside className="w-[350px] border-l">
-            <ChatPanel messages={chatMessages} onSendMessage={sendMessage} localUserId={userId} />
-          </aside>
-        )}
-      </main>
-    </div>
+            </aside>
+          )}
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }
