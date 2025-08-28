@@ -45,7 +45,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const router = useRouter();
   const originalVideoTrack = useRef<MediaStreamTrack | null>(null);
 
-  const cleanupAndRedirect = useCallback(async () => {
+  const hangUp = useCallback(async () => {
     if (!roomId) {
         router.push('/');
         return;
@@ -112,56 +112,61 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     setIsCameraOff((prev) => !prev);
   }, [localStream]);
 
-   const toggleScreenSharing = useCallback(async () => {
+  const toggleScreenSharing = useCallback(async () => {
     if (!localStream) return;
 
-    const stopScreenShare = () => {
-      if (!originalVideoTrack.current) return;
-      
-      const screenTrack = localStream.getVideoTracks()[0];
-      screenTrack.stop();
+    const stopSharing = () => {
+        if (isScreenSharing) {
+            localStream.getTracks().forEach(track => {
+                if (track.kind !== 'audio' && track.getSettings().displaySurface) {
+                    track.stop();
+                }
+            });
+        }
+        if (originalVideoTrack.current) {
+            const currentVideoTrack = localStream.getVideoTracks()[0];
+            if (currentVideoTrack) {
+                localStream.removeTrack(currentVideoTrack);
+            }
+            localStream.addTrack(originalVideoTrack.current);
 
-      localStream.removeTrack(screenTrack);
-      localStream.addTrack(originalVideoTrack.current);
-
-      pcs.current.forEach(connection => {
-        const sender = connection.getSenders().find(s => s.track?.kind === 'video');
-        sender?.replaceTrack(originalVideoTrack.current!);
-      });
-
-      originalVideoTrack.current = originalVideoTrack.current.clone();
-      setIsScreenSharing(false);
+            pcs.current.forEach(connection => {
+                const sender = connection.getSenders().find(s => s.track?.kind === 'video');
+                sender?.replaceTrack(originalVideoTrack.current!);
+            });
+            originalVideoTrack.current = originalVideoTrack.current.clone();
+            setIsScreenSharing(false);
+        }
     };
 
     if (isScreenSharing) {
-      stopScreenShare();
+        stopSharing();
     } else {
-      try {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const screenTrack = displayStream.getVideoTracks()[0];
-        
-        if (!originalVideoTrack.current) {
-          originalVideoTrack.current = localStream.getVideoTracks()[0]?.clone();
+        try {
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            const screenTrack = displayStream.getVideoTracks()[0];
+
+            if (!originalVideoTrack.current) {
+                originalVideoTrack.current = localStream.getVideoTracks()[0]?.clone();
+            }
+
+            const currentVideoTrack = localStream.getVideoTracks()[0];
+            if (currentVideoTrack) {
+                localStream.removeTrack(currentVideoTrack);
+            }
+            localStream.addTrack(screenTrack);
+
+            pcs.current.forEach(connection => {
+                const sender = connection.getSenders().find(s => s.track?.kind === 'video');
+                sender?.replaceTrack(screenTrack);
+            });
+
+            setIsScreenSharing(true);
+            screenTrack.onended = () => stopSharing();
+        } catch (err) {
+            console.error("Screen share failed: ", err);
+            toast({ title: 'Screen Share Failed', description: 'Could not start screen sharing.', variant: 'destructive' });
         }
-        
-        const currentVideoTrack = localStream.getVideoTracks()[0];
-        if (currentVideoTrack) {
-          localStream.removeTrack(currentVideoTrack);
-          // Don't stop it, just replace it
-        }
-        localStream.addTrack(screenTrack);
-  
-        pcs.current.forEach(connection => {
-          const sender = connection.getSenders().find(s => s.track?.kind === 'video');
-          sender?.replaceTrack(screenTrack);
-        });
-        setIsScreenSharing(true);
-  
-        screenTrack.onended = stopScreenShare;
-      } catch(err) {
-        console.error("Screen share failed: ", err);
-        toast({ title: 'Screen Share Failed', description: 'Could not start screen sharing.', variant: 'destructive' });
-      }
     }
   }, [localStream, toast, isScreenSharing]);
 
@@ -354,8 +359,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     
     return () => {
       unsubscribeRoom();
-      pcs.current.forEach(pc => pc.close());
-      pcs.current.clear();
       // Don't stop tracks here, hangUp will handle it.
     };
   }, [localStream, roomId, userId]);
@@ -384,7 +387,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     isCameraOff,
     isScreenSharing,
     chatMessages,
-    hangUp: cleanupAndRedirect,
+    hangUp,
     toggleMute,
     toggleCamera,
     toggleScreenSharing,
