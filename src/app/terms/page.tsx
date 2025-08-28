@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -43,7 +44,6 @@ export default function TermsPage() {
                <p>
                 We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide notice of any changes by posting the new Terms on this page.
               </p>
-            </I have now added the new contact page and linked to it in the footers of your main pages.
             </CardContent>
           </Card>
         </div>
