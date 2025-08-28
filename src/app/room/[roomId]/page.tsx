@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Fragment } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useWebRTC } from '@/hooks/use-webrtc';
 import { CallControls } from '@/components/connect-now/CallControls';
@@ -9,7 +9,7 @@ import { ChatPanel } from '@/components/connect-now/ChatPanel';
 import { ParticipantVideo } from '@/components/connect-now/ParticipantVideo';
 import { ScreenShareWarningDialog } from '@/components/connect-now/ScreenShareWarningDialog';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2, MessageSquare, Users, Copy, ChevronLeft, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import React from 'react';
 
 function VideoGridLayout({ children }: { children: React.ReactNode }) {
     const count = React.Children.count(children);
@@ -109,7 +110,7 @@ export default function RoomPage() {
   const remoteStreamEntries = Array.from(remoteStreams.entries());
   
   const localParticipant = (
-     <ParticipantVideo stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff || !hasMediaPermissions} isMuted={isMuted || !hasMediaPermissions} isScreen={isScreenSharing} />
+     <ParticipantVideo key={userId} stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff || !hasMediaPermissions} isMuted={isMuted || !hasMediaPermissions} isScreen={isScreenSharing} />
   );
 
   const remoteParticipants = remoteStreamEntries.map(([id, stream]) => {
