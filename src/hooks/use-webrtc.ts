@@ -276,7 +276,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   
     const isCurrentlySharing = localStream.getVideoTracks()[0].getSettings().displaySurface;
   
-    if (isCurrentlySharing) {
+    const stopScreenShare = () => {
       const screenTrack = localStream.getVideoTracks()[0];
       screenTrack.stop();
   
@@ -290,6 +290,10 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   
       originalVideoTrack.current = originalVideoTrack.current.clone();
       setIsScreenSharing(false);
+    };
+
+    if (isCurrentlySharing) {
+      stopScreenShare();
     } else {
       try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -307,16 +311,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         setIsScreenSharing(true);
   
         screenTrack.onended = () => {
-          const videoTrack = localStream.getVideoTracks()[0];
-          videoTrack.stop();
-          localStream.removeTrack(videoTrack);
-          localStream.addTrack(originalVideoTrack.current);
-          pcs.current.forEach(connection => {
-            const sender = connection.getSenders().find(s => s.track?.kind === 'video');
-            sender?.replaceTrack(originalVideoTrack.current);
-          });
-          originalVideoTrack.current = originalVideoTrack.current.clone();
-          setIsScreenSharing(false);
+            stopScreenShare();
         };
       } catch(err) {
         console.error("Screen share failed: ", err);
