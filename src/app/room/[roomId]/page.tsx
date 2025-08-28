@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useWebRTC } from '@/hooks/use-webrtc';
 import { CallControls } from '@/components/connect-now/CallControls';
 import { ChatPanel } from '@/components/connect-now/ChatPanel';
@@ -11,8 +12,11 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2, MessageSquare, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
-export default function RoomPage({ params }: { params: { roomId: string } }) {
+export default function RoomPage() {
+  const params = useParams();
+  const roomId = typeof params.roomId === 'string' ? params.roomId : '';
   const [localUserName, setLocalUserName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
@@ -31,7 +35,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     toggleScreenSharing,
     sendMessage,
     isSomeoneElseScreenSharing,
-  } = useWebRTC(nameSubmitted ? params.roomId : '', localUserName);
+  } = useWebRTC(nameSubmitted ? roomId : null, localUserName);
 
   const isMobile = useIsMobile();
 
@@ -104,9 +108,9 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
           </div>
           {!isMobile && (
             <Button variant="outline" onClick={() => {
-              navigator.clipboard.writeText(params.roomId);
+              if (roomId) navigator.clipboard.writeText(roomId);
             }}>
-              Room ID: {params.roomId}
+              Room ID: {roomId}
             </Button>
           )}
         </div>

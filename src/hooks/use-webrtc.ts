@@ -27,7 +27,7 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
-export const useWebRTC = (roomId: string, localUserName: string) => {
+export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [isMuted, setIsMuted] = useState(false);
@@ -50,21 +50,27 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
 
     if (!roomId) return;
 
-    const roomRef = doc(db, 'rooms', roomId);
-    const participantsQuery = query(collection(roomRef, 'participants'));
-    const participantsSnapshot = await getDocs(participantsQuery);
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      const participantsQuery = query(collection(roomRef, 'participants'));
+      const participantsSnapshot = await getDocs(participantsQuery);
 
-    const batch = writeBatch(db);
-    participantsSnapshot.forEach((participantDoc) => {
-      if (participantDoc.id.startsWith(userId)) {
-        batch.delete(participantDoc.ref);
+      if (!participantsSnapshot.empty) {
+        const batch = writeBatch(db);
+        participantsSnapshot.forEach((participantDoc) => {
+          if (participantDoc.id.startsWith(userId)) {
+            batch.delete(participantDoc.ref);
+          }
+        });
+        await batch.commit();
       }
-    });
-    await batch.commit();
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+    }
   }, [localStream, roomId, userId]);
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !localUserName) return;
 
     const start = async () => {
       try {
@@ -73,8 +79,13 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
         setLocalStream(stream);
 
         const roomRef = doc(db, 'rooms', roomId);
-        const participantRef = doc(roomRef, 'participants', `${userId}_${localUserName}`);
-        await addDoc(collection(participantRef, 'dummy'), {}); // Firestore doesn't allow empty docs
+        const participantDocRef = doc(roomRef, 'participants', `${userId}_${localUserName}`);
+        
+        // Firestore doesn't allow creating empty documents directly.
+        // A common workaround is to add a document to a subcollection.
+        const dummyCollectionRef = collection(participantDocRef, 'presence');
+        await addDoc(dummyCollectionRef, { joinedAt: serverTimestamp() });
+
       } catch (error) {
         console.error('Error accessing media devices.', error);
         toast({
@@ -129,7 +140,6 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
           };
 
           const offerCollection = collection(change.doc.ref, 'offers');
-          const answerCollection = collection(doc(roomRef, 'participants', change.doc.id), 'answers');
 
           connection.onicecandidate = async (event) => {
             if (event.candidate) {
@@ -137,8 +147,10 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
               await addDoc(candidateCollection, event.candidate.toJSON());
             }
           };
+          
+          const remoteParticipantDoc = doc(roomRef, 'participants', `${userId}_${localUserName}`);
 
-          onSnapshot(collection(doc(roomRef, 'participants', `${userId}_${localUserName}`), `iceCandidatesFrom_${remoteUserId}`), (iceSnapshot) => {
+          onSnapshot(collection(remoteParticipantDoc, `iceCandidatesFrom_${remoteUserId}`), (iceSnapshot) => {
             iceSnapshot.docChanges().forEach((iceChange) => {
               if (iceChange.type === 'added') {
                 connection.addIceCandidate(new RTCIceCandidate(iceChange.doc.data()));
@@ -146,35 +158,34 @@ export const useWebRTC = (roomId: string, localUserName: string) => {
             });
           });
 
-          onSnapshot(query(collection(doc(roomRef, 'participants', `${userId}_${localUserName}`), 'offers')), async (offerSnapshot) => {
-            offerSnapshot.docChanges().forEach(async (offerChange) => {
-                if (offerChange.type === 'added' && offerChange.doc.id === remoteUserId) {
-                    const offerDescription = new RTCSessionDescription(offerChange.doc.data());
-                    await connection.setRemoteDescription(offerDescription);
+          onSnapshot(query(collection(remoteParticipantDoc, 'offers')), async (offerSnapshot) => {
+            for (const offerChange of offerSnapshot.docChanges()) {
+                if (offerChange.type === 'added' && offerChange.doc.data().from === remoteUserId) {
+                    await connection.setRemoteDescription(new RTCSessionDescription(offerChange.doc.data()));
                     const answerDescription = await connection.createAnswer();
                     await connection.setLocalDescription(answerDescription);
 
-                    await addDoc(collection(doc(roomRef, 'participants', change.doc.id), 'answers'), {
+                    const answerCollection = collection(doc(roomRef, 'participants', change.doc.id), 'answers');
+                    await addDoc(answerCollection, {
                         ...answerDescription.toJSON(),
                         from: userId,
                     });
                 }
-            });
+            }
           });
 
           const offer = await connection.createOffer();
           await connection.setLocalDescription(offer);
           await addDoc(offerCollection, { ...offer.toJSON(), from: userId });
           
-          onSnapshot(query(collection(doc(roomRef, 'participants', `${userId}_${localUserName}`), 'answers')), async (answerSnapshot) => {
-            answerSnapshot.docChanges().forEach(async (answerChange) => {
+          onSnapshot(query(collection(remoteParticipantDoc, 'answers')), async (answerSnapshot) => {
+            for (const answerChange of answerSnapshot.docChanges()) {
                 if(answerChange.type === 'added' && answerChange.doc.data().from === remoteUserId) {
-                    const answerDescription = new RTCSessionDescription(answerChange.doc.data());
                     if (connection.signalingState !== 'stable') {
-                        await connection.setRemoteDescription(answerDescription);
+                        await connection.setRemoteDescription(new RTCSessionDescription(answerChange.doc.data()));
                     }
                 }
-            });
+            }
           });
         }
 
