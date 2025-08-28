@@ -53,17 +53,35 @@ export default function PricingPage() {
     
     setLoading(plan);
     
-    // Placeholder for Stripe checkout logic
-    console.log(`Initiating checkout for ${plan} plan for user ${user.uid}`);
-    toast({
-      title: "Coming Soon!",
-      description: "Payment processing is currently under development. Please check back later."
-    });
-    
-    // Simulate network request
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ plan: plan, userId: user.uid }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create checkout session.');
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        router.push(url);
+      } else {
+        throw new Error('Checkout URL not found.');
+      }
+
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: "Payment Error",
+        description: error.message || "There was a problem processing your payment. Please try again."
+      });
       setLoading(null);
-    }, 2000);
+    }
   };
 
   return (
