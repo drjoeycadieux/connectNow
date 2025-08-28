@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CreateRoomForm } from "@/components/connect-now/CreateRoomForm";
 import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
-import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset, Info, X } from "lucide-react";
+import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset, Info, X, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -32,6 +32,32 @@ function JoinRoomFormSkeleton() {
     </div>
   )
 }
+
+function OutageBanner() {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <Alert variant="destructive" className="rounded-none border-x-0 border-t-0 relative pr-10">
+      <AlertTriangle className="h-4 w-4" />
+      <AlertTitle className="font-bold">Platform Temporarily Unavailable</AlertTitle>
+      <AlertDescription>
+        We are currently experiencing technical difficulties and are working to resolve the issue. Thank you for your patience.
+      </AlertDescription>
+       <button
+          onClick={() => setIsVisible(false)}
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-destructive-foreground/70 hover:text-destructive-foreground"
+          aria-label="Dismiss banner"
+        >
+          <X className="h-5 w-5" />
+        </button>
+    </Alert>
+  );
+}
+
 
 function BetaBanner() {
   const [isVisible, setIsVisible] = useState(true);
@@ -61,6 +87,7 @@ function BetaBanner() {
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
+      <OutageBanner />
       <BetaBanner />
       <div className="absolute inset-0 z-0 h-full w-full bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
       <header className="sticky top-0 z-50 flex items-center justify-between h-20 px-4 md:px-8 bg-background/80 backdrop-blur-sm border-b">
