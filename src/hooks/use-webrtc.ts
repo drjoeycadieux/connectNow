@@ -45,50 +45,51 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const router = useRouter();
   const originalVideoTrack = useRef<MediaStreamTrack | null>(null);
 
-  const hangUp = useCallback(async () => {
-    if (!roomId) return;
+  const cleanupAndRedirect = useCallback(async () => {
+    if (!roomId) {
+        router.push('/');
+        return;
+    }
   
     localStream?.getTracks().forEach(track => track.stop());
   
     pcs.current.forEach(pc => pc.close());
     pcs.current.clear();
   
-    // We don't want to set localStream to null here because it can cause UI flicker
-    // setLocalStream(null); 
     setRemoteStreams(new Map());
   
-    if (roomId) {
-        const roomRef = doc(db, 'rooms', roomId);
-        const roomDocSnap = await getDoc(roomRef);
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomDocSnap = await getDoc(roomRef);
 
-        if (roomDocSnap.exists()) {
-            const participants = roomDocSnap.data().participants || [];
-            if (participants.length <= 1) {
-                const batch = writeBatch(db);
-                
-                const iceCandidatesCollectionRef = collection(roomRef, 'iceCandidates');
-                const iceCandidatesSnap = await getDocs(iceCandidatesCollectionRef);
-                iceCandidatesSnap.forEach(doc => {
-                    const candidatesSubCollectionRef = collection(doc.ref, 'candidates');
-                    getDocs(candidatesSubCollectionRef).then(snap => snap.forEach(subDoc => batch.delete(subDoc.ref)));
-                    batch.delete(doc.ref)
-                });
+    if (roomDocSnap.exists()) {
+        const participants = roomDocSnap.data().participants || [];
+        if (participants.length <= 1) {
+            // If I'm the last one, delete the whole room
+            const batch = writeBatch(db);
+            
+            const iceCandidatesCollectionRef = collection(roomRef, 'iceCandidates');
+            const iceCandidatesSnap = await getDocs(iceCandidatesCollectionRef);
+            iceCandidatesSnap.forEach(doc => {
+                const candidatesSubCollectionRef = collection(doc.ref, 'candidates');
+                getDocs(candidatesSubCollectionRef).then(snap => snap.forEach(subDoc => batch.delete(subDoc.ref)));
+                batch.delete(doc.ref)
+            });
 
-                const messagesRef = collection(roomRef, 'messages');
-                const messagesSnap = await getDocs(messagesRef);
-                messagesSnap.forEach(doc => batch.delete(doc.ref));
+            const messagesRef = collection(roomRef, 'messages');
+            const messagesSnap = await getDocs(messagesRef);
+            messagesSnap.forEach(doc => batch.delete(doc.ref));
 
-                batch.delete(roomRef);
-                await batch.commit();
+            batch.delete(roomRef);
+            await batch.commit();
 
-            } else {
-                const updates: {[key:string]: any} = {
-                    participants: participants.filter((pId: string) => pId !== userId),
-                };
-                updates[`offers.${userId}`] = deleteField();
-                updates[`answers.${userId}`] = deleteField();
-                await updateDoc(roomRef, updates);
-            }
+        } else {
+            // Otherwise, just remove myself
+            const updates: {[key:string]: any} = {
+                participants: participants.filter((pId: string) => pId !== userId),
+            };
+            updates[`offers.${userId}`] = deleteField();
+            updates[`answers.${userId}`] = deleteField();
+            await updateDoc(roomRef, updates);
         }
     }
     
@@ -114,8 +115,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
    const toggleScreenSharing = useCallback(async () => {
     if (!localStream) return;
 
-    const isCurrentlySharing = isScreenSharing;
-
     const stopScreenShare = () => {
       if (!originalVideoTrack.current) return;
       
@@ -134,7 +133,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       setIsScreenSharing(false);
     };
 
-    if (isCurrentlySharing) {
+    if (isScreenSharing) {
       stopScreenShare();
     } else {
       try {
@@ -148,7 +147,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const currentVideoTrack = localStream.getVideoTracks()[0];
         if (currentVideoTrack) {
           localStream.removeTrack(currentVideoTrack);
-          currentVideoTrack.stop();
+          // Don't stop it, just replace it
         }
         localStream.addTrack(screenTrack);
   
@@ -185,8 +184,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
           description: 'Could not access camera and microphone. Joining without them.',
           variant: 'destructive',
         });
-        // Don't redirect, allow joining without media.
-        // Create a dummy stream to allow connection logic to proceed
         if (isMounted) {
           const stream = new MediaStream();
           setLocalStream(stream);
@@ -196,19 +193,20 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
     startMedia();
     
-    const chatQuery = query(collection(db, 'rooms', roomId, 'messages'), orderBy('timestamp'));
-    const unsubscribeChat = onSnapshot(chatQuery, (snapshot) => {
-      const messages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ChatMessage));
-      if (isMounted) setChatMessages(messages);
-    });
-
-    // Don't add beforeunload listener here as it can be problematic
-    // The new hangUp logic will be called from the component
     return () => {
       isMounted = false;
-      unsubscribeChat();
     };
   }, [roomId, localUserName, toast]);
+
+   useEffect(() => {
+    if (!roomId) return;
+    const chatQuery = query(collection(db, 'rooms', roomId, 'messages'), orderBy('timestamp'));
+    const unsubscribeChat = onSnapshot(chatQuery, (snapshot) => {
+        const messages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ChatMessage));
+        setChatMessages(messages);
+    });
+    return () => unsubscribeChat();
+   }, [roomId]);
 
 
   // Main WebRTC Logic
@@ -260,15 +258,14 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             }
         };
 
-        const unsubscribeIce = onSnapshot(localIceCandidatesCollection, (snapshot) => {
+        onSnapshot(localIceCandidatesCollection, (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
                   try {
                     await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
                   } catch (e) {
-                     console.warn("Failed to add ICE candidate", e);
+                     console.warn("Failed to add ICE candidate for", remoteUserId, e);
                   }
-                  await deleteDoc(change.doc.ref);
                 }
             });
         });
@@ -292,62 +289,75 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const data = snapshot.data();
         if (!data) return;
 
-        const remoteParticipants = (data.participants || []).filter((pId: string) => pId !== userId);
+        const allParticipants = data.participants || [];
+        const remoteParticipants = allParticipants.filter((pId: string) => pId !== userId);
 
+        // Call new participants
         for (const remoteUserId of remoteParticipants) {
           if (!pcs.current.has(remoteUserId)) {
-            const pc = createPeerConnection(remoteUserId);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            
-            const offerPayload = { [userId]: { type: offer.type, sdp: offer.sdp, to: remoteUserId } };
-            await updateDoc(roomRef, { offers: { ...data.offers, ...offerPayload } });
+             const pc = createPeerConnection(remoteUserId);
+             const offer = await pc.createOffer();
+             await pc.setLocalDescription(offer);
+             
+             const offerPayload = { [userId]: { type: offer.type, sdp: offer.sdp, to: remoteUserId } };
+             await updateDoc(roomRef, { [`offers.${userId}`]: offerPayload[userId] });
           }
         }
-
-        // Handle offers for me
-        const offersForMe = Object.entries(data.offers || {}).filter(([, offer]) => (offer as any).to === userId);
-        for (const [offererId, offer] of offersForMe) {
-          const pc = createPeerConnection(offererId);
-          if (pc.signalingState === 'stable') {
-            await pc.setRemoteDescription(new RTCSessionDescription(offer as RTCSessionDescriptionInit));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            
-            const answerPayload = { [userId]: { type: answer.type, sdp: answer.sdp, to: offererId }};
-            
-            const offerUpdate = { ...data.offers };
-            delete (offerUpdate as any)[offererId];
-
-            await updateDoc(roomRef, { 
-              answers: { ...data.answers, ...answerPayload },
-              offers: offerUpdate,
-            });
-          }
-        }
-
-        // Handle answers for me
-        const answersForMe = Object.entries(data.answers || {}).filter(([, answer]) => (answer as any).to === userId);
-        for (const [answererId, answer] of answersForMe) {
-            const pc = pcs.current.get(answererId);
-            if (pc && pc.signalingState === 'have-local-offer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(answer as RTCSessionDescriptionInit));
-                
-                const answerUpdate = { ...data.answers };
-                delete (answerUpdate as any)[answererId];
-                await updateDoc(roomRef, { answers: answerUpdate });
+        
+        // Handle offers meant for me
+        const offers = data.offers || {};
+        for (const offererId in offers) {
+            if (offers[offererId].to === userId) {
+                const pc = createPeerConnection(offererId);
+                if (pc.signalingState === 'stable') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(offers[offererId]));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    
+                    const answerPayload = { [userId]: { type: answer.type, sdp: answer.sdp, to: offererId }};
+                    
+                    await updateDoc(roomRef, { 
+                      [`answers.${userId}`]: answerPayload[userId],
+                      [`offers.${offererId}`]: deleteField()
+                    });
+                }
             }
         }
+
+        // Handle answers meant for me
+        const answers = data.answers || {};
+        for (const answererId in answers) {
+            if (answers[answererId].to === userId) {
+                const pc = pcs.current.get(answererId);
+                if (pc && pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(answers[answererId]));
+                    await updateDoc(roomRef, { [`answers.${answererId}`]: deleteField() });
+                }
+            }
+        }
+        
+        // Cleanup disconnected participants
+        const currentPcs = Array.from(pcs.current.keys());
+        for (const pcId of currentPcs) {
+            if (!remoteParticipants.includes(pcId)) {
+                pcs.current.get(pcId)?.close();
+                pcs.current.delete(pcId);
+                setRemoteStreams(prev => {
+                    const newMap = new Map(prev);
+                    newMap.delete(pcId);
+                    return newMap;
+                });
+            }
+        }
+
     });
     
-    const cleanup = () => {
+    return () => {
       unsubscribeRoom();
       pcs.current.forEach(pc => pc.close());
       pcs.current.clear();
-      localStream?.getTracks().forEach(track => track.stop());
-    }
-
-    return cleanup;
+      // Don't stop tracks here, hangUp will handle it.
+    };
   }, [localStream, roomId, userId]);
   
   const sendMessage = useCallback(async (message: string) => {
@@ -374,7 +384,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     isCameraOff,
     isScreenSharing,
     chatMessages,
-    hangUp,
+    hangUp: cleanupAndRedirect,
     toggleMute,
     toggleCamera,
     toggleScreenSharing,
