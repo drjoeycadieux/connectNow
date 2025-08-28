@@ -1,13 +1,19 @@
+
+'use client';
+
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateRoomForm } from "@/components/connect-now/CreateRoomForm";
 import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
-import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset } from "lucide-react";
+import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset, Info, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from '@/lib/utils';
 
 
 function JoinRoomFormSkeleton() {
@@ -26,9 +32,35 @@ function JoinRoomFormSkeleton() {
   )
 }
 
+function BetaBanner() {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <Alert className="bg-yellow-500/10 text-yellow-foreground border-yellow-500/50 rounded-none border-x-0 border-t-0 relative pr-10">
+      <Info className="h-4 w-4 !text-yellow-500" />
+      <AlertTitle className="font-bold !text-yellow-400">Prototype Notice</AlertTitle>
+      <AlertDescription className="!text-yellow-300/90">
+        This is a demo application. The video calling feature is experimental and may not work reliably at all times. Your patience is appreciated!
+      </AlertDescription>
+       <button
+          onClick={() => setIsVisible(false)}
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-yellow-400 hover:text-yellow-200"
+          aria-label="Dismiss banner"
+        >
+          <X className="h-5 w-5" />
+        </button>
+    </Alert>
+  );
+}
+
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
+      <BetaBanner />
       <div className="absolute inset-0 z-0 h-full w-full bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
       <header className="sticky top-0 z-50 flex items-center justify-between h-20 px-4 md:px-8 bg-background/80 backdrop-blur-sm border-b">
         <h1 className="font-headline text-3xl font-bold text-primary">
@@ -57,10 +89,10 @@ export default function Home() {
           </div>
           <div className="relative animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
              <Image 
-                src="https://picsum.photos/800/601"
+                src="https://picsum.photos/800/600"
                 alt="IT professional providing remote support"
                 width={800}
-                height={601}
+                height={600}
                 className="rounded-xl shadow-2xl"
                 data-ai-hint="IT support team"
               />
@@ -247,5 +279,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
