@@ -1,9 +1,16 @@
 
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useToast } from '@/hooks/use-toast';
 
 const features = [
   "Unlimited Meetings",
@@ -16,6 +23,38 @@ const features = [
 ];
 
 export default function PricingPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState<'monthly' | 'yearly' | null>(null);
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+
+  useState(() => {
+    return onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+  });
+
+  const handleCheckout = async (plan: 'monthly' | 'yearly') => {
+    if (!user) {
+      router.push('/auth?redirect=/pricing');
+      return;
+    }
+    
+    setLoading(plan);
+    
+    // Placeholder for Stripe checkout logic
+    console.log(`Initiating checkout for ${plan} plan for user ${user.uid}`);
+    toast({
+      title: "Coming Soon!",
+      description: "Payment processing is currently under development. Please check back later."
+    });
+    
+    // Simulate network request
+    setTimeout(() => {
+      setLoading(null);
+    }, 2000);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 flex items-center justify-between h-20 px-4 md:px-8 bg-background/80 backdrop-blur-sm border-b">
@@ -54,7 +93,9 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" size="lg">Choose Monthly</Button>
+                <Button className="w-full" size="lg" onClick={() => handleCheckout('monthly')} disabled={loading === 'monthly'}>
+                   {loading === 'monthly' ? <Loader2 className="animate-spin" /> : 'Choose Monthly'}
+                </Button>
               </CardFooter>
             </Card>
             
@@ -78,7 +119,9 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" size="lg">Choose Yearly</Button>
+                <Button className="w-full" size="lg" onClick={() => handleCheckout('yearly')} disabled={loading === 'yearly'}>
+                   {loading === 'yearly' ? <Loader2 className="animate-spin" /> : 'Choose Yearly'}
+                </Button>
               </CardFooter>
             </Card>
           </div>
