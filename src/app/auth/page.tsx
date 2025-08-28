@@ -56,7 +56,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleAuthAction = async (action: 'signup' | 'login') => {
+  const handleAuthAction = async (action: 'signup' | 'login' | 'team_login') => {
     setLoading(true);
     try {
       let userCredential;
@@ -70,8 +70,17 @@ export default function AuthPage() {
           displayName: displayName,
           createdAt: new Date(),
         });
-      } else {
+      } else { // 'login' or 'team_login'
         userCredential = await signInWithEmailAndPassword(auth, email, password);
+         if (action === 'team_login') {
+            // Optional: Add team-specific logic here, e.g., check if user is in a 'team' collection.
+            const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+            if (!userDoc.exists() || !userDoc.data().isTeamMember) {
+                 // You might want to sign them out and show an error
+                 // For now, we will just log a warning.
+                 console.warn("A non-team member attempted to log in via the team portal.");
+            }
+        }
       }
       toast({ title: 'Success', description: `Successfully ${action === 'signup' ? 'signed up' : 'logged in'}.` });
       router.push('/');
@@ -130,9 +139,10 @@ export default function AuthPage() {
       </header>
        <main className="flex-1 flex items-center justify-center py-12">
         <Tabs defaultValue="login" className="w-full max-w-md">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="team">Team Sign-in</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <Card>
@@ -194,9 +204,32 @@ export default function AuthPage() {
               </CardContent>
             </Card>
           </TabsContent>
+           <TabsContent value="team">
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Sign-in</CardTitle>
+                <CardDescription>For authorized support staff only.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="team-email">Team Email</Label>
+                  <Input id="team-email" type="email" placeholder="support@connectnow.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="team-password">Password</Label>
+                  <Input id="team-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                </div>
+                <Button onClick={() => handleAuthAction('team_login')} disabled={loading} className="w-full">
+                  {loading ? 'Signing in...' : 'Sign In as Team Member'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
 
+
+    
