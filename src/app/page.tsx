@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CreateRoomButton } from "@/components/connect-now/CreateRoomButton";
 import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
-import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, CheckCircle } from "lucide-react";
+import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive } from "lucide-react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -13,7 +14,7 @@ export default function Home() {
       <div className="absolute inset-0 z-0 h-full w-full bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
       <header className="sticky top-0 z-50 flex items-center justify-between h-20 px-4 md:px-8 bg-background/80 backdrop-blur-sm border-b">
         <h1 className="font-headline text-3xl font-bold text-primary">
-          Connect Now
+          <Link href="/">Connect Now</Link>
         </h1>
         <Button variant="secondary" size="lg" asChild>
           <a href="#join">Get Started</a>
@@ -234,6 +235,10 @@ export default function Home() {
       <footer className="py-8 border-t bg-secondary/30">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <p className="font-semibold text-lg mb-2">Connect Now</p>
+          <div className="flex justify-center gap-4 mb-2">
+            <Link href="/legal" className="text-sm hover:underline">Legal Information</Link>
+            <Link href="/terms" className="text-sm hover:underline">Terms of Use</Link>
+          </div>
           <p>Secure WebRTC for IT Professionals</p>
           <p>&copy; {new Date().getFullYear()} Connect Now. All rights reserved.</p>
         </div>
