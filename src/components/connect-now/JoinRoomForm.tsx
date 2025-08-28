@@ -1,30 +1,43 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { LogIn } from 'lucide-react';
 
 const formSchema = z.object({
+  name: z.string().trim().min(2, { message: 'Your name must be at least 2 characters.' }),
   roomId: z.string().trim().min(1, { message: 'Room ID is required.' }),
 });
 
 export function JoinRoomForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: '',
       roomId: '',
     },
   });
 
+  useEffect(() => {
+    const joinRoomId = searchParams.get('joinRoomId');
+    if (joinRoomId) {
+      form.setValue('roomId', joinRoomId);
+    }
+  }, [searchParams, form]);
+
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    router.push(`/room/${values.roomId}`);
+    router.push(`/room/${values.roomId}?name=${encodeURIComponent(values.name)}`);
   }
 
   return (
@@ -35,8 +48,22 @@ export function JoinRoomForm() {
           name="roomId"
           render={({ field }) => (
             <FormItem>
+               <FormLabel>Room ID</FormLabel>
               <FormControl>
                 <Input placeholder="Enter Room ID to join" {...field} className="text-center h-12 text-base" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+               <FormLabel>Your Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter your name to join" {...field} className="text-center h-12 text-base" />
               </FormControl>
               <FormMessage />
             </FormItem>

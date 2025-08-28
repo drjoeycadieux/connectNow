@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreateRoomButton } from "@/components/connect-now/CreateRoomButton";
+import { CreateRoomForm } from "@/components/connect-now/CreateRoomForm";
 import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
 import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset } from "lucide-react";
 import Image from "next/image";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 
 export default function Home() {
@@ -31,7 +30,7 @@ export default function Home() {
               Reliable, end-to-end encrypted video conferencing designed for technical support, system administration, and incident response.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              <CreateRoomButton />
+              <CreateRoomForm />
               <Button variant="outline" size="lg" asChild>
                 <a href="#join">Join a Session</a>
               </Button>
@@ -200,7 +199,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-6 p-8">
-                <CreateRoomButton />
+                <CreateRoomForm />
                 <div className="flex items-center gap-4">
                   <Separator className="flex-1" />
                   <span className="text-sm font-medium text-muted-foreground">OR</span>

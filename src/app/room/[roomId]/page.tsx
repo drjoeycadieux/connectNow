@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useWebRTC } from '@/hooks/use-webrtc';
 import { CallControls } from '@/components/connect-now/CallControls';
 import { ChatPanel } from '@/components/connect-now/ChatPanel';
@@ -11,17 +11,21 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2, MessageSquare, Users, Copy } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Mic, Video } from 'lucide-react';
 
 export default function RoomPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const roomId = typeof params.roomId === 'string' ? params.roomId : '';
-  const [localUserName, setLocalUserName] = useState('');
-  const [nameSubmitted, setNameSubmitted] = useState(false);
+  const initialName = searchParams.get('name') || '';
+  const meetingTopic = searchParams.get('topic') || 'Connect Now';
+
+  const [localUserName, setLocalUserName] = useState(initialName);
+  const [nameSubmitted, setNameSubmitted] = useState(!!initialName);
   const [showWarning, setShowWarning] = useState(false);
   const [hasMediaPermissions, setHasMediaPermissions] = useState(true);
   const { toast } = useToast();
@@ -74,35 +78,17 @@ export default function RoomPage() {
   const remoteStreamEntries = Array.from(remoteStreams.entries());
 
   if (!nameSubmitted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-sm">
-          <CardContent className="p-6">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (localUserName.trim()) setNameSubmitted(true);
-              }}
-              className="flex flex-col gap-4"
-            >
-              <h2 className="font-headline text-2xl font-bold text-center">Enter your name</h2>
-              <input
-                type="text"
-                value={localUserName}
-                onChange={(e) => setLocalUserName(e.target.value)}
-                placeholder="Your name"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-              <Button type="submit" disabled={!localUserName.trim()}>Join Call</Button>
-            </form>
-          </CardContent>
-        </Card>
+     router.push(`/?joinRoomId=${roomId}`);
+     return (
+       <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-lg">Redirecting to join...</p>
       </div>
-    );
+     );
   }
   
   // This loader is shown while the WebRTC hook is initializing
-  if (localStream === null && nameSubmitted) {
+  if (!localStream && nameSubmitted) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-muted-foreground">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -121,7 +107,7 @@ export default function RoomPage() {
           onConfirm={confirmScreenShare}
         />
         <header className="flex items-center justify-between border-b p-4">
-          <h1 className="font-headline text-2xl font-bold text-primary">Connect Now</h1>
+          <h1 className="font-headline text-2xl font-bold text-primary truncate" title={meetingTopic}>{meetingTopic}</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="h-5 w-5" />
