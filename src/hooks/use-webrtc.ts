@@ -77,8 +77,9 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
                 const messagesSnap = await getDocs(messagesRef);
                 messagesSnap.forEach(doc => batch.delete(doc.ref));
 
+                batch.delete(roomRef);
                 await batch.commit();
-                await deleteDoc(roomRef);
+
             } else {
                 const updates: {[key:string]: any} = {
                     participants: participants.filter((pId: string) => pId !== userId),
@@ -110,23 +111,25 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   }, [localStream]);
 
   const toggleScreenSharing = useCallback(async () => {
-    if (!localStream || !originalVideoTrack.current) return;
-  
-    const isCurrentlySharing = localStream.getVideoTracks()[0].getSettings().displaySurface;
-  
+    if (!localStream) return;
+
+    const isCurrentlySharing = isScreenSharing;
+
     const stopScreenShare = () => {
+      if (!originalVideoTrack.current) return;
+      
       const screenTrack = localStream.getVideoTracks()[0];
       screenTrack.stop();
-  
+
       localStream.removeTrack(screenTrack);
-      localStream.addTrack(originalVideoTrack.current!);
-  
+      localStream.addTrack(originalVideoTrack.current);
+
       pcs.current.forEach(connection => {
         const sender = connection.getSenders().find(s => s.track?.kind === 'video');
         sender?.replaceTrack(originalVideoTrack.current!);
       });
-  
-      originalVideoTrack.current = originalVideoTrack.current!.clone();
+
+      originalVideoTrack.current = originalVideoTrack.current.clone();
       setIsScreenSharing(false);
     };
 
@@ -136,11 +139,17 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         const screenTrack = displayStream.getVideoTracks()[0];
-        const currentVideoTrack = localStream.getVideoTracks()[0];
         
-        localStream.removeTrack(currentVideoTrack);
+        if (!originalVideoTrack.current) {
+          originalVideoTrack.current = localStream.getVideoTracks()[0]?.clone();
+        }
+        
+        const currentVideoTrack = localStream.getVideoTracks()[0];
+        if (currentVideoTrack) {
+          localStream.removeTrack(currentVideoTrack);
+          currentVideoTrack.stop();
+        }
         localStream.addTrack(screenTrack);
-        currentVideoTrack.stop();
   
         pcs.current.forEach(connection => {
           const sender = connection.getSenders().find(s => s.track?.kind === 'video');
@@ -148,15 +157,13 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         });
         setIsScreenSharing(true);
   
-        screenTrack.onended = () => {
-            stopScreenShare();
-        };
+        screenTrack.onended = stopScreenShare;
       } catch(err) {
         console.error("Screen share failed: ", err);
         toast({ title: 'Screen Share Failed', description: 'Could not start screen sharing.', variant: 'destructive' });
       }
     }
-  }, [localStream, toast]);
+  }, [localStream, toast, isScreenSharing]);
 
   useEffect(() => {
     if (!roomId || !localUserName) return;
@@ -173,10 +180,15 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         console.error('Error accessing media devices.', error);
         toast({
           title: 'Media Access Denied',
-          description: 'Could not access camera and microphone. Please check permissions.',
+          description: 'Could not access camera and microphone. Joining without them.',
           variant: 'destructive',
         });
-        if(isMounted) router.push('/');
+        // Don't redirect, allow joining without media.
+        // Create a dummy stream to allow connection logic to proceed
+        if (isMounted) {
+          const stream = new MediaStream();
+          setLocalStream(stream);
+        }
       }
     };
 
@@ -224,9 +236,11 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const pc = new RTCPeerConnection(servers);
         pcs.current.set(remoteUserId, pc);
 
-        localStream.getTracks().forEach(track => {
-            pc.addTrack(track, localStream);
-        });
+        if (localStream.getTracks().length > 0) {
+          localStream.getTracks().forEach(track => {
+              pc.addTrack(track, localStream);
+          });
+        }
 
         pc.ontrack = (event) => {
             setRemoteStreams(prev => new Map(prev).set(remoteUserId, event.streams[0]));
@@ -282,6 +296,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
           }
         }
 
+        // Handle offers for me
         const offersForMe = Object.entries(data.offers || {}).filter(([, offer]) => (offer as any).to === userId);
         for (const [offererId, offer] of offersForMe) {
           const pc = createPeerConnection(offererId);
@@ -302,6 +317,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
           }
         }
 
+        // Handle answers for me
         const answersForMe = Object.entries(data.answers || {}).filter(([, answer]) => (answer as any).to === userId);
         for (const [answererId, answer] of answersForMe) {
             const pc = pcs.current.get(answererId);
@@ -352,5 +368,3 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     isSomeoneElseScreenSharing,
   };
 };
-
-    

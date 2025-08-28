@@ -14,6 +14,8 @@ import { Loader2, MessageSquare, Users, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Mic, Video } from 'lucide-react';
 
 export default function RoomPage() {
   const params = useParams();
@@ -21,6 +23,7 @@ export default function RoomPage() {
   const [localUserName, setLocalUserName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [hasMediaPermissions, setHasMediaPermissions] = useState(true);
   const { toast } = useToast();
   
   const {
@@ -40,6 +43,15 @@ export default function RoomPage() {
   } = useWebRTC(nameSubmitted ? roomId : null, localUserName);
 
   const isMobile = useIsMobile();
+  
+  useEffect(() => {
+    if (localStream) {
+      const hasVideo = localStream.getVideoTracks().length > 0;
+      const hasAudio = localStream.getAudioTracks().length > 0;
+      setHasMediaPermissions(hasVideo && hasAudio);
+    }
+  }, [localStream]);
+
 
   const handleToggleScreenShare = () => {
     if (!isScreenSharing && !isSomeoneElseScreenSharing) {
@@ -83,8 +95,9 @@ export default function RoomPage() {
       </div>
     );
   }
-
-  if (!localStream) {
+  
+  // This loader is shown while the WebRTC hook is initializing
+  if (localStream === null && nameSubmitted) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-muted-foreground">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -135,11 +148,19 @@ export default function RoomPage() {
         <main className="flex flex-1 overflow-hidden">
           <div className="flex flex-1 flex-col">
             <div className="flex-1 overflow-auto p-4">
+              { !hasMediaPermissions && (
+                 <Alert variant="destructive" className="mb-4">
+                   <AlertTitle>Media Permissions Error</AlertTitle>
+                   <AlertDescription>
+                     Could not access your camera and microphone. Please check your browser's permissions. You can still participate in chat.
+                   </AlertDescription>
+                 </Alert>
+              )}
               <div className={`grid gap-4 ${isScreenSharing || isSomeoneElseScreenSharing ? '' : 'grid-cols-1 md:grid-cols-2'}`}>
                   {isScreenSharing ? (
                      <ParticipantVideo stream={localStream} name="Your Screen" isLocal isScreen />
                   ) : (
-                    <ParticipantVideo stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff} isMuted={isMuted} />
+                    <ParticipantVideo stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff || !hasMediaPermissions} isMuted={isMuted || !hasMediaPermissions} />
                   )}
                   {remoteStreamEntries.map(([id, stream]) => {
                     const isScreen = stream.getVideoTracks().some(t => t.getSettings().displaySurface);
@@ -163,6 +184,7 @@ export default function RoomPage() {
                 onToggleCamera={toggleCamera}
                 onToggleScreenShare={handleToggleScreenShare}
                 onHangUp={hangUp}
+                disableMediaControls={!hasMediaPermissions}
               />
             </div>
           </div>

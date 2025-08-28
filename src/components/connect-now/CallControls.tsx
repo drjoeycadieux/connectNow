@@ -12,6 +12,7 @@ interface CallControlsProps {
   onToggleCamera: () => void;
   onToggleScreenShare: () => void;
   onHangUp: () => void;
+  disableMediaControls?: boolean;
 }
 
 export function CallControls({
@@ -22,6 +23,7 @@ export function CallControls({
   onToggleCamera,
   onToggleScreenShare,
   onHangUp,
+  disableMediaControls = false,
 }: CallControlsProps) {
   return (
     <TooltipProvider>
@@ -34,6 +36,7 @@ export function CallControls({
               className="h-12 w-12 rounded-full"
               onClick={onToggleMute}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
+              disabled={disableMediaControls}
             >
               {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
             </Button>
@@ -51,6 +54,7 @@ export function CallControls({
               className="h-12 w-12 rounded-full"
               onClick={onToggleCamera}
               aria-label={isCameraOff ? 'Turn camera on' : 'Turn camera off'}
+              disabled={disableMediaControls}
             >
               {isCameraOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
             </Button>
@@ -68,6 +72,7 @@ export function CallControls({
               className="h-12 w-12 rounded-full"
               onClick={onToggleScreenShare}
               aria-label={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
+              disabled={disableMediaControls}
             >
               {isScreenSharing ? <ScreenShareOff className="h-6 w-6" /> : <ScreenShare className="h-6 w-6" />}
             </Button>
