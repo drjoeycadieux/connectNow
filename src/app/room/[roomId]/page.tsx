@@ -1,0 +1,169 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useWebRTC } from '@/hooks/use-webrtc';
+import { CallControls } from '@/components/connect-now/CallControls';
+import { ChatPanel } from '@/components/connect-now/ChatPanel';
+import { ParticipantVideo } from '@/components/connect-now/ParticipantVideo';
+import { ScreenShareWarningDialog } from '@/components/connect-now/ScreenShareWarningDialog';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Loader2, MessageSquare, Users } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+
+export default function RoomPage({ params }: { params: { roomId: string } }) {
+  const [localUserName, setLocalUserName] = useState('');
+  const [nameSubmitted, setNameSubmitted] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  
+  const {
+    userId,
+    localStream,
+    remoteStreams,
+    isMuted,
+    isCameraOff,
+    isScreenSharing,
+    chatMessages,
+    hangUp,
+    toggleMute,
+    toggleCamera,
+    toggleScreenSharing,
+    sendMessage,
+    isSomeoneElseScreenSharing,
+  } = useWebRTC(nameSubmitted ? params.roomId : '', localUserName);
+
+  const isMobile = useIsMobile();
+
+  const handleToggleScreenShare = () => {
+    if (!isScreenSharing && !isSomeoneElseScreenSharing) {
+      setShowWarning(true);
+    } else {
+      toggleScreenSharing();
+    }
+  };
+
+  const confirmScreenShare = () => {
+    toggleScreenSharing();
+    setShowWarning(false);
+  };
+  
+  const remoteStreamEntries = Array.from(remoteStreams.entries());
+
+  if (!nameSubmitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm">
+          <CardContent className="p-6">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (localUserName.trim()) setNameSubmitted(true);
+              }}
+              className="flex flex-col gap-4"
+            >
+              <h2 className="font-headline text-2xl font-bold text-center">Enter your name</h2>
+              <input
+                type="text"
+                value={localUserName}
+                onChange={(e) => setLocalUserName(e.target.value)}
+                placeholder="Your name"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              <Button type="submit" disabled={!localUserName.trim()}>Join Call</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!localStream) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-lg">Connecting to call...</p>
+        <p className="text-sm">Please allow camera and microphone access.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen w-full flex-col bg-background">
+      <ScreenShareWarningDialog
+        open={showWarning}
+        onOpenChange={setShowWarning}
+        onConfirm={confirmScreenShare}
+      />
+      <header className="flex items-center justify-between border-b p-4">
+        <h1 className="font-headline text-2xl font-bold text-primary">Connect Now</h1>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Users className="h-5 w-5" />
+            <span>{remoteStreams.size + 1}</span>
+          </div>
+          {!isMobile && (
+            <Button variant="outline" onClick={() => {
+              navigator.clipboard.writeText(params.roomId);
+            }}>
+              Room ID: {params.roomId}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <main className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col">
+          <div className="flex-1 overflow-auto p-4">
+            <div className={`grid gap-4 ${isScreenSharing || isSomeoneElseScreenSharing ? '' : 'grid-cols-1 md:grid-cols-2'}`}>
+                {isScreenSharing ? (
+                   <ParticipantVideo stream={localStream} name="Your Screen" isLocal isScreen />
+                ) : (
+                  <ParticipantVideo stream={localStream} name={`${localUserName} (You)`} isLocal isCameraOff={isCameraOff} isMuted={isMuted} />
+                )}
+                {remoteStreamEntries.map(([id, stream]) => {
+                  const isScreen = stream.getVideoTracks().some(t => t.getSettings().displaySurface);
+                   return (
+                     <ParticipantVideo
+                       key={id}
+                       stream={stream}
+                       name={`Participant ${id.substring(0, 4)}`}
+                       isScreen={isScreen}
+                     />
+                   );
+                })}
+            </div>
+          </div>
+          <div className="border-t bg-card/50 p-4">
+            <CallControls
+              isMuted={isMuted}
+              isCameraOff={isCameraOff}
+              isScreenSharing={isScreenSharing}
+              onToggleMute={toggleMute}
+              onToggleCamera={toggleCamera}
+              onToggleScreenShare={handleToggleScreenShare}
+              onHangUp={hangUp}
+            />
+          </div>
+        </div>
+
+        {isMobile ? (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="icon" className="fixed bottom-24 right-4 z-20 rounded-full h-14 w-14 shadow-lg">
+                <MessageSquare />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[85%] p-0">
+              <ChatPanel messages={chatMessages} onSendMessage={sendMessage} localUserId={userId} />
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <aside className="w-[350px] border-l">
+            <ChatPanel messages={chatMessages} onSendMessage={sendMessage} localUserId={userId} />
+          </aside>
+        )}
+      </main>
+    </div>
+  );
+}
