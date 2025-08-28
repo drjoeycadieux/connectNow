@@ -73,13 +73,19 @@ export default function AuthPage() {
       } else { // 'login' or 'team_login'
         userCredential = await signInWithEmailAndPassword(auth, email, password);
          if (action === 'team_login') {
-            // Optional: Add team-specific logic here, e.g., check if user is in a 'team' collection.
             const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
             if (!userDoc.exists() || !userDoc.data().isTeamMember) {
-                 // You might want to sign them out and show an error
-                 // For now, we will just log a warning.
-                 console.warn("A non-team member attempted to log in via the team portal.");
+                 toast({
+                    variant: 'destructive',
+                    title: 'Access Denied',
+                    description: 'This login is for team members only.',
+                 });
+                 await auth.signOut();
+                 setLoading(false);
+                 return;
             }
+            router.push('/admin/dashboard');
+            return;
         }
       }
       toast({ title: 'Success', description: `Successfully ${action === 'signup' ? 'signed up' : 'logged in'}.` });
@@ -230,6 +236,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
-
-    
