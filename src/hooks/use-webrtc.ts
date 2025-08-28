@@ -63,7 +63,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         if (roomDocSnap.exists()) {
             const participants = roomDocSnap.data().participants || [];
             if (participants.length <= 1) {
-                // If I am the last one, delete the whole room and subcollections
                 const batch = writeBatch(db);
                 
                 const iceCandidatesRef = collection(roomRef, 'iceCandidates');
@@ -77,7 +76,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
                 batch.delete(roomRef);
                 await batch.commit();
             } else {
-                // Otherwise, just remove myself
                 const updates: {[key:string]: any} = {
                     participants: participants.filter((pId: string) => pId !== userId),
                 };
@@ -91,7 +89,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     router.push('/');
   }, [roomId, localStream, userId, router]);
 
-  // Get user media
   useEffect(() => {
     if (!roomId || !localUserName) return;
     
@@ -133,8 +130,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       unsubscribeChat();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, localUserName]);
+  }, [roomId, localUserName, hangUp, router, toast]);
 
   // Main WebRTC Logic
   useEffect(() => {
@@ -143,15 +139,14 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     const roomRef = doc(db, 'rooms', roomId);
 
     const init = async () => {
-        const roomDoc = await getDoc(roomRef);
-        if (!roomDoc.exists()) {
-            await setDoc(roomRef, { participants: [], offers: {}, answers: {} });
-        }
-        // Add self to participants
-        const participants = roomDoc.data()?.participants || [];
-        if (!participants.includes(userId)) {
-            await updateDoc(roomRef, { participants: [...participants, userId] });
-        }
+      const roomDoc = await getDoc(roomRef);
+      if (!roomDoc.exists()) {
+        await setDoc(roomRef, { participants: [], offers: {}, answers: {} }, { merge: true });
+      }
+      const participants = roomDoc.data()?.participants || [];
+      if (!participants.includes(userId)) {
+        await updateDoc(roomRef, { participants: [...participants, userId] });
+      }
     };
     init();
 
@@ -180,7 +175,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             }
         };
 
-        const unsubscribeIce = onSnapshot(localIceCandidatesCollection, (snapshot) => {
+        onSnapshot(localIceCandidatesCollection, (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
                     await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
@@ -210,7 +205,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
         const remoteParticipants = (data.participants || []).filter((pId: string) => pId !== userId);
 
-        // Call new participants
         for (const remoteUserId of remoteParticipants) {
           if (!pcs.current.has(remoteUserId)) {
             const pc = createPeerConnection(remoteUserId);
@@ -224,16 +218,16 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
         // Handle offers for me
         const offersForMe = Object.entries(data.offers || {}).filter(([, offer]: any) => offer.to === userId);
-        for (const [offererId, offer]: [string, any] of offersForMe) {
+        for (const [offererId, offer] of offersForMe) {
           const pc = createPeerConnection(offererId);
           if (pc.signalingState === 'stable') {
-            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await pc.setRemoteDescription(new RTCSessionDescription(offer as RTCSessionDescriptionInit));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             
             const answerPayload = { [userId]: { type: answer.type, sdp: answer.sdp, to: offererId }};
             const offerUpdate = { ...data.offers };
-            delete offerUpdate[offererId];
+            delete offerUpdate[offererId as string];
 
             await updateDoc(roomRef, { 
               answers: { ...data.answers, ...answerPayload },
@@ -244,13 +238,13 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
         // Handle answers for me
         const answersForMe = Object.entries(data.answers || {}).filter(([, answer]: any) => answer.to === userId);
-        for (const [answererId, answer]: [string, any] of answersForMe) {
-            const pc = pcs.current.get(answererId);
+        for (const [answererId, answer] of answersForMe) {
+            const pc = pcs.current.get(answererId as string);
             if (pc && pc.signalingState === 'have-local-offer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                await pc.setRemoteDescription(new RTCSessionDescription(answer as RTCSessionDescriptionInit));
 
                 const answerUpdate = { ...data.answers };
-                delete answerUpdate[answererId];
+                delete answerUpdate[answererId as string];
                 await updateDoc(roomRef, { answers: answerUpdate });
             }
         }
@@ -280,25 +274,22 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const toggleScreenSharing = useCallback(async () => {
     if (!localStream || !originalVideoTrack.current) return;
   
-    const stopScreenShare = () => {
-      if (!localStream || !originalVideoTrack.current) return;
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack.getSettings().displaySurface) {
-        videoTrack.stop();
-        localStream.removeTrack(videoTrack);
-        localStream.addTrack(originalVideoTrack.current);
+    const isCurrentlySharing = localStream.getVideoTracks()[0].getSettings().displaySurface;
   
-        pcs.current.forEach(connection => {
-          const sender = connection.getSenders().find(s => s.track?.kind === 'video');
-          sender?.replaceTrack(originalVideoTrack.current);
-        });
-        originalVideoTrack.current = originalVideoTrack.current.clone();
-        setIsScreenSharing(false);
-      }
-    };
+    if (isCurrentlySharing) {
+      const screenTrack = localStream.getVideoTracks()[0];
+      screenTrack.stop();
   
-    if (isScreenSharing) {
-      stopScreenShare();
+      localStream.removeTrack(screenTrack);
+      localStream.addTrack(originalVideoTrack.current);
+  
+      pcs.current.forEach(connection => {
+        const sender = connection.getSenders().find(s => s.track?.kind === 'video');
+        sender?.replaceTrack(originalVideoTrack.current);
+      });
+  
+      originalVideoTrack.current = originalVideoTrack.current.clone();
+      setIsScreenSharing(false);
     } else {
       try {
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -316,16 +307,23 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         setIsScreenSharing(true);
   
         screenTrack.onended = () => {
-          stopScreenShare();
+          const videoTrack = localStream.getVideoTracks()[0];
+          videoTrack.stop();
+          localStream.removeTrack(videoTrack);
+          localStream.addTrack(originalVideoTrack.current);
+          pcs.current.forEach(connection => {
+            const sender = connection.getSenders().find(s => s.track?.kind === 'video');
+            sender?.replaceTrack(originalVideoTrack.current);
+          });
+          originalVideoTrack.current = originalVideoTrack.current.clone();
+          setIsScreenSharing(false);
         };
       } catch(err) {
         console.error("Screen share failed: ", err);
         toast({ title: 'Screen Share Failed', description: 'Could not start screen sharing.', variant: 'destructive' });
-        // If screen share fails, revert to the original camera track
-        stopScreenShare();
       }
     }
-  }, [isScreenSharing, localStream, toast]);
+  }, [localStream, toast]);
   
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim() || !roomId) return;
