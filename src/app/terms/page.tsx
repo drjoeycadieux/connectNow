@@ -43,12 +43,18 @@ export default function TermsPage() {
                <p>
                 We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide notice of any changes by posting the new Terms on this page.
               </p>
+            </I have now added the new contact page and linked to it in the footers of your main pages.
             </CardContent>
           </Card>
         </div>
       </main>
        <footer className="py-8 border-t bg-secondary/30">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
+          <div className="flex justify-center gap-4 mb-2">
+            <Link href="/legal" className="text-sm hover:underline">Legal Information</Link>
+            <Link href="/terms" className="text-sm hover:underline">Terms of Use</Link>
+            <Link href="/contact" className="text-sm hover:underline">Contact Support</Link>
+          </div>
           <p>&copy; {new Date().getFullYear()} Connect Now. All rights reserved.</p>
         </div>
       </footer>

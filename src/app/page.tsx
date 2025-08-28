@@ -271,6 +271,7 @@ export default function Home() {
           <div className="flex justify-center gap-4 mb-2">
             <Link href="/legal" className="text-sm hover:underline">Legal Information</Link>
             <Link href="/terms" className="text-sm hover:underline">Terms of Use</Link>
+            <Link href="/contact" className="text-sm hover:underline">Contact Support</Link>
           </div>
           <p>Secure WebRTC for IT Professionals</p>
           <p>&copy; {new Date().getFullYear()} Connect Now. All rights reserved.</p>
