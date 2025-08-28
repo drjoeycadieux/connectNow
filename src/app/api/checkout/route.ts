@@ -2,11 +2,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase';
 import { stripe } from '@/lib/stripe';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-const monthlyPriceId = 'price_1PgUTqB1kXn2Xy9fR5m1N0c1'; // Replace with your actual test price ID
-const yearlyPriceId = 'price_1PgUUAB1kXn2Xy9fL2m2o1a1'; // Replace with your actual test price ID
+const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID!; 
+const yearlyPriceId = process.env.STRIPE_YEARLY_PRICE_ID!;
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +14,10 @@ export async function POST(request: Request) {
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+        return new NextResponse('Stripe is not configured. Missing secret key.', { status: 500 });
     }
 
     const userDocRef = doc(db, 'users', userId);
@@ -34,11 +38,12 @@ export async function POST(request: Request) {
             },
         });
         customerId = customer.id;
+        await setDoc(userDocRef, { stripeCustomerId: customerId }, { merge: true });
     }
 
 
     const priceId = plan === 'monthly' ? monthlyPriceId : yearlyPriceId;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL as string;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
