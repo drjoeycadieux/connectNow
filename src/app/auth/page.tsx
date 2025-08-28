@@ -71,8 +71,17 @@ export default function AuthPage() {
           createdAt: new Date(),
         });
       } else { // 'login' or 'team_login'
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-         if (action === 'team_login') {
+        if (action === 'team_login') {
+            if (email.toLowerCase() !== 'support@connectnow.com') {
+                toast({
+                    variant: 'destructive',
+                    title: 'Access Denied',
+                    description: 'This email address is not authorized for team sign-in.',
+                });
+                setLoading(false);
+                return;
+            }
+            userCredential = await signInWithEmailAndPassword(auth, email, password);
             const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
             if (!userDoc.exists() || !userDoc.data().isTeamMember) {
                  toast({
@@ -87,6 +96,7 @@ export default function AuthPage() {
             router.push('/admin/dashboard');
             return;
         }
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
       toast({ title: 'Success', description: `Successfully ${action === 'signup' ? 'signed up' : 'logged in'}.` });
       router.push('/');
@@ -122,7 +132,7 @@ export default function AuthPage() {
 
       toast({ title: 'Success', description: 'Successfully logged in with Google.' });
       router.push('/');
-    } catch (error: any) {
+    } catch (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
