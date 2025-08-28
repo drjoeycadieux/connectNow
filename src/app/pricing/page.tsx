@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 
 const monthlyFeatures = [
   "Up to 5 Participants",
+  "Up to 6 Meetings per Month",
   "End-to-End Encryption",
   "High-Quality Video & Audio",
   "Screen Sharing",
