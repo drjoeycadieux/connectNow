@@ -1,3 +1,4 @@
+
 'use client';
 
 import { db } from '@/lib/firebase';
@@ -31,9 +32,14 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
+// Extend MediaStream to hold peerName
+interface NamedMediaStream extends MediaStream {
+    peerName?: string;
+}
+
 export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, NamedMediaStream>>(new Map());
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -44,6 +50,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const { toast } = useToast();
   const router = useRouter();
   const originalVideoTrack = useRef<MediaStreamTrack | null>(null);
+  const audioTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const hangUp = useCallback(async () => {
     if (!roomId) {
@@ -62,8 +69,10 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     const roomDocSnap = await getDoc(roomRef);
 
     if (roomDocSnap.exists()) {
-        const participants = roomDocSnap.data().participants || [];
-        if (participants.length <= 1) {
+        const participants = roomDocSnap.data().participants || {};
+        const participantIds = Object.keys(participants);
+
+        if (participantIds.length <= 1) {
             const batch = writeBatch(db);
             
             const iceCandidatesCollectionRef = collection(roomRef, 'iceCandidates');
@@ -82,9 +91,8 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             await batch.commit();
 
         } else {
-            const updates: {[key:string]: any} = {
-                participants: participants.filter((pId: string) => pId !== userId),
-            };
+            const updates: {[key:string]: any} = {};
+            updates[`participants.${userId}`] = deleteField();
             updates[`offers.${userId}`] = deleteField();
             updates[`answers.${userId}`] = deleteField();
             await updateDoc(roomRef, updates);
@@ -105,35 +113,31 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
     localStream.getVideoTracks().forEach((track) => {
-      track.enabled = !track.enabled;
+        if (track.getSettings().displaySurface) return; // Don't disable screen share track
+        track.enabled = !track.enabled;
     });
     setIsCameraOff((prev) => !prev);
   }, [localStream]);
 
-  const toggleScreenSharing = useCallback(async () => {
+ const toggleScreenSharing = useCallback(async () => {
     if (!localStream) return;
 
     const stopSharing = () => {
-        if (isScreenSharing) {
-            localStream.getTracks().forEach(track => {
-                if (track.kind !== 'audio' && track.getSettings().displaySurface) {
-                    track.stop();
-                }
-            });
-        }
-        if (originalVideoTrack.current) {
-            const currentVideoTrack = localStream.getVideoTracks()[0];
-            if (currentVideoTrack) {
-                localStream.removeTrack(currentVideoTrack);
+        if (isScreenSharing && originalVideoTrack.current) {
+            const screenTrack = localStream.getVideoTracks().find(t => t.getSettings().displaySurface);
+            if (screenTrack) {
+                screenTrack.stop();
+                localStream.removeTrack(screenTrack);
             }
+            
             localStream.addTrack(originalVideoTrack.current);
-
-            pcs.current.forEach(connection => {
-                const sender = connection.getSenders().find(s => s.track?.kind === 'video');
-                sender?.replaceTrack(originalVideoTrack.current!);
+            pcs.current.forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+                sender?.replaceTrack(originalVideoTrack.current);
             });
-            originalVideoTrack.current = originalVideoTrack.current.clone();
+            originalVideoTrack.current = null;
             setIsScreenSharing(false);
+            setIsCameraOff(false); // Re-enable camera view
         }
     };
 
@@ -143,30 +147,28 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         try {
             const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             const screenTrack = displayStream.getVideoTracks()[0];
-
-            if (!originalVideoTrack.current) {
-                originalVideoTrack.current = localStream.getVideoTracks()[0]?.clone();
-            }
-
-            const currentVideoTrack = localStream.getVideoTracks()[0];
+            
+            const currentVideoTrack = localStream.getVideoTracks().find(t => !t.getSettings().displaySurface);
             if (currentVideoTrack) {
+                originalVideoTrack.current = currentVideoTrack;
                 localStream.removeTrack(currentVideoTrack);
             }
+
             localStream.addTrack(screenTrack);
 
-            pcs.current.forEach(connection => {
-                const sender = connection.getSenders().find(s => s.track?.kind === 'video');
+            pcs.current.forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track?.kind === 'video');
                 sender?.replaceTrack(screenTrack);
             });
 
             setIsScreenSharing(true);
-            screenTrack.onended = () => stopSharing();
+            screenTrack.onended = stopSharing; // Stop sharing when user clicks the browser's "Stop sharing" button
         } catch (err) {
             console.error("Screen share failed: ", err);
             toast({ title: 'Screen Share Failed', description: 'Could not start screen sharing.', variant: 'destructive' });
         }
     }
-  }, [localStream, toast, isScreenSharing]);
+}, [localStream, toast, isScreenSharing]);
 
 
   useEffect(() => {
@@ -177,7 +179,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         if(isMounted) {
-            originalVideoTrack.current = stream.getVideoTracks()[0].clone();
+            audioTrackRef.current = stream.getAudioTracks()[0];
             setLocalStream(stream);
         }
       } catch (error) {
@@ -221,16 +223,13 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     const init = async () => {
       const roomDoc = await getDoc(roomRef);
       if (!roomDoc.exists()) {
-        await setDoc(roomRef, { participants: [], offers: {}, answers: {} }, { merge: true });
+        await setDoc(roomRef, { participants: {}, offers: {}, answers: {} }, { merge: true });
       }
-      const currentParticipants = roomDoc.data()?.participants || [];
-      if (!currentParticipants.includes(userId)) {
-        await updateDoc(roomRef, { participants: [...currentParticipants, userId] });
-      }
+      await updateDoc(roomRef, { [`participants.${userId}`]: localUserName });
     };
     init();
 
-    const createPeerConnection = (remoteUserId: string): RTCPeerConnection => {
+    const createPeerConnection = (remoteUserId: string, remoteUserName: string): RTCPeerConnection => {
         if (pcs.current.has(remoteUserId)) {
             return pcs.current.get(remoteUserId)!;
         }
@@ -249,7 +248,9 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         }
 
         pc.ontrack = (event) => {
-            setRemoteStreams(prev => new Map(prev).set(remoteUserId, event.streams[0]));
+            const stream = event.streams[0] as NamedMediaStream;
+            stream.peerName = remoteUserName;
+            setRemoteStreams(prev => new Map(prev).set(remoteUserId, stream));
         };
 
         const localIceCandidatesCollection = collection(roomRef, 'iceCandidates', userId, 'candidates');
@@ -290,20 +291,20 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
     const unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
         const data = snapshot.data();
-        if (!data) return;
+        if (!data || !data.participants) return;
 
-        const allParticipants = data.participants || [];
-        const remoteParticipants = allParticipants.filter((pId: string) => pId !== userId);
+        const allParticipants = data.participants;
+        const remoteParticipants = Object.keys(allParticipants).filter((pId: string) => pId !== userId);
 
         // Call new participants
         for (const remoteUserId of remoteParticipants) {
           if (!pcs.current.has(remoteUserId)) {
-             const pc = createPeerConnection(remoteUserId);
+             const pc = createPeerConnection(remoteUserId, allParticipants[remoteUserId]);
              const offer = await pc.createOffer();
              await pc.setLocalDescription(offer);
              
-             const offerPayload = { [userId]: { type: offer.type, sdp: offer.sdp, to: remoteUserId } };
-             await updateDoc(roomRef, { [`offers.${userId}`]: offerPayload[userId] });
+             const offerPayload = { type: offer.type, sdp: offer.sdp, to: remoteUserId, from: userId };
+             await updateDoc(roomRef, { [`offers.${userId}`]: offerPayload });
           }
         }
         
@@ -311,16 +312,17 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const offers = data.offers || {};
         for (const offererId in offers) {
             if (offers[offererId].to === userId) {
-                const pc = createPeerConnection(offererId);
+                const remoteUserName = allParticipants[offererId] || 'Unknown User';
+                const pc = createPeerConnection(offererId, remoteUserName);
                 if (pc.signalingState === 'stable') {
                     await pc.setRemoteDescription(new RTCSessionDescription(offers[offererId]));
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     
-                    const answerPayload = { [userId]: { type: answer.type, sdp: answer.sdp, to: offererId }};
+                    const answerPayload = { type: answer.type, sdp: answer.sdp, to: offererId, from: userId };
                     
                     await updateDoc(roomRef, { 
-                      [`answers.${userId}`]: answerPayload[userId],
+                      [`answers.${userId}`]: answerPayload,
                       [`offers.${offererId}`]: deleteField()
                     });
                 }
@@ -366,7 +368,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       window.removeEventListener('beforeunload', beforeUnloadHandler);
       hangUp();
     };
-  }, [localStream, roomId, userId, hangUp]);
+  }, [localStream, roomId, userId, localUserName, hangUp]);
   
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim() || !roomId) return;
@@ -377,12 +379,6 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       timestamp: serverTimestamp(),
     });
   }, [roomId, userId, localUserName]);
-
-  const isSomeoneElseScreenSharing = useMemo(() => 
-    [...remoteStreams.values()].some(stream => 
-      stream.getVideoTracks().some(track => track.getSettings().displaySurface)
-    ), 
-  [remoteStreams]);
 
   return {
     userId,
@@ -397,6 +393,5 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     toggleCamera,
     toggleScreenSharing,
     sendMessage,
-    isSomeoneElseScreenSharing,
   };
 };
