@@ -57,12 +57,12 @@ export default function Home() {
           </div>
           <div className="relative animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
              <Image 
-                src="https://picsum.photos/800/600"
+                src="https://picsum.photos/800/601"
                 alt="IT professional providing remote support"
                 width={800}
-                height={600}
+                height={601}
                 className="rounded-xl shadow-2xl"
-                data-ai-hint="IT support"
+                data-ai-hint="IT support team"
               />
           </div>
         </section>
