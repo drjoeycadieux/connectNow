@@ -164,11 +164,11 @@ export default function Home() {
                   <p className="text-muted-foreground mb-4">"Connect Now has been a game-changer for our remote support. It's fast, secure, and so easy for our end-users. The stability during screen sharing is unmatched."</p>
                   <div className="flex items-center gap-4">
                     <Avatar>
-                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Alex R." />
-                      <AvatarFallback>AR</AvatarFallback>
+                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704e" alt="Jessica M." />
+                      <AvatarFallback>JM</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-semibold">Alex R.</p>
+                      <p className="font-semibold">Jessica M.</p>
                       <p className="text-sm text-muted-foreground">IT Director</p>
                     </div>
                   </div>
@@ -179,11 +179,11 @@ export default function Home() {
                   <p className="text-muted-foreground mb-4">"For incident response, we need a tool that just works. We can spin up a call with our entire on-call team in seconds, no matter where they are. It's incredibly reliable."</p>
                   <div className="flex items-center gap-4">
                     <Avatar>
-                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704e" alt="Jessica M." />
-                      <AvatarFallback>JM</AvatarFallback>
+                      <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Alex R." />
+                      <AvatarFallback>AR</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-semibold">Jessica M.</p>
+                      <p className="font-semibold">Alex R.</p>
                       <p className="text-sm text-muted-foreground">Systems Administrator</p>
                     </div>
                   </div>
