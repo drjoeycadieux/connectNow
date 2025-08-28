@@ -53,7 +53,8 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     pcs.current.forEach(pc => pc.close());
     pcs.current.clear();
   
-    setLocalStream(null);
+    // We don't want to set localStream to null here because it can cause UI flicker
+    // setLocalStream(null); 
     setRemoteStreams(new Map());
   
     if (roomId) {
@@ -110,7 +111,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     setIsCameraOff((prev) => !prev);
   }, [localStream]);
 
-  const toggleScreenSharing = useCallback(async () => {
+   const toggleScreenSharing = useCallback(async () => {
     if (!localStream) return;
 
     const isCurrentlySharing = isScreenSharing;
@@ -165,6 +166,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
     }
   }, [localStream, toast, isScreenSharing]);
 
+
   useEffect(() => {
     if (!roomId || !localUserName) return;
     
@@ -200,18 +202,14 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       if (isMounted) setChatMessages(messages);
     });
 
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      hangUp();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
+    // Don't add beforeunload listener here as it can be problematic
+    // The new hangUp logic will be called from the component
     return () => {
       isMounted = false;
-      hangUp();
       unsubscribeChat();
-      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [roomId, localUserName, hangUp, router, toast]);
+  }, [roomId, localUserName, toast]);
+
 
   // Main WebRTC Logic
   useEffect(() => {
@@ -224,7 +222,10 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
       if (!roomDoc.exists()) {
         await setDoc(roomRef, { participants: [], offers: {}, answers: {} }, { merge: true });
       }
-      await updateDoc(roomRef, { participants: [...(roomDoc.data()?.participants || []), userId] });
+      const currentParticipants = roomDoc.data()?.participants || [];
+      if (!currentParticipants.includes(userId)) {
+        await updateDoc(roomRef, { participants: [...currentParticipants, userId] });
+      }
     };
     init();
 
@@ -238,7 +239,11 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
 
         if (localStream.getTracks().length > 0) {
           localStream.getTracks().forEach(track => {
+            try {
               pc.addTrack(track, localStream);
+            } catch(e) {
+              console.warn("Could not add track", e)
+            }
           });
         }
 
@@ -258,8 +263,12 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const unsubscribeIce = onSnapshot(localIceCandidatesCollection, (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === 'added') {
+                  try {
                     await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-                    await deleteDoc(change.doc.ref);
+                  } catch (e) {
+                     console.warn("Failed to add ICE candidate", e);
+                  }
+                  await deleteDoc(change.doc.ref);
                 }
             });
         });
@@ -330,10 +339,15 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             }
         }
     });
+    
+    const cleanup = () => {
+      unsubscribeRoom();
+      pcs.current.forEach(pc => pc.close());
+      pcs.current.clear();
+      localStream?.getTracks().forEach(track => track.stop());
+    }
 
-    return () => {
-        unsubscribeRoom();
-    };
+    return cleanup;
   }, [localStream, roomId, userId]);
   
   const sendMessage = useCallback(async (message: string) => {
