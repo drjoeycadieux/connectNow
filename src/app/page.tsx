@@ -44,7 +44,7 @@ function BetaBanner() {
       <Info className="h-4 w-4 !text-yellow-500" />
       <AlertTitle className="font-bold !text-yellow-400">Prototype Notice</AlertTitle>
       <AlertDescription className="!text-yellow-300/90">
-        This is a demo application. The video calling feature is experimental and may not work reliably at all times. Your patience is appreciated!
+        The video calling feature is experimental and may not work reliably at all times. Your patience is appreciated!
       </AlertDescription>
        <button
           onClick={() => setIsVisible(false)}
