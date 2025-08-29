@@ -26,25 +26,34 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setDisplayName(currentUser.displayName || '');
         
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserData(data);
-            setCustomDomain(data.customDomain || '');
-        }
+        getDoc(userDocRef).then(userDoc => {
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                setUserData(data);
+                setCustomDomain(data.customDomain || '');
+            }
+            setLoading(false);
+        }).catch(error => {
+            console.error("Error fetching user data:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not load your profile data.',
+            });
+            setLoading(false);
+        });
       } else {
         router.push('/auth');
       }
-      setLoading(false);
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [router, toast]);
 
   const handleUpdateProfile = async () => {
     if (!user) return;
