@@ -137,7 +137,7 @@ export default function PricingPage() {
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Pro</CardTitle>
                 <CardDescription>For growing teams that need more power and support.</CardDescription>
-              </ACardHeader>
+              </CardHeader>
               <CardContent className="space-y-6">
                 <div className="text-5xl font-bold">
                   $25 <span className="text-lg font-medium text-muted-foreground">/ user / month</span>

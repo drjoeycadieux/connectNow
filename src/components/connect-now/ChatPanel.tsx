@@ -1,199 +1,100 @@
+
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useToast } from '@/hooks/use-toast';
+import { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { ChatMessage } from '@/types';
+import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const freeFeatures = [
-  "Up to 10 Participants",
-  "End-to-End Encrypted Chat",
-  "File Sharing",
-  "Community Support",
-];
-
-const proFeatures = [
-  "Unlimited Participants",
-  "Priority Email Support",
-  "Team Management Dashboard",
-  "Custom Integrations",
-];
-
-const enterpriseFeatures = [
-  "Everything in Pro, plus:",
-  "Dedicated Onboarding",
-  "24/7 Priority Support",
-  "Audit Logs & Compliance",
-  "On-premise Deployment Option",
-];
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
 
 
-export default function PricingPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState<'pro' | 'enterprise' | null>(null);
-  const [user, setUser] = useState<User | null>(auth.currentUser);
+interface ChatPanelProps {
+  messages: ChatMessage[];
+  localUserId: string;
+  onSendMessage: (message: string) => void;
+}
 
-  useState(() => {
-    return onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-  });
+export function ChatPanel({ messages, localUserId, onSendMessage }: ChatPanelProps) {
+  const [newMessage, setNewMessage] = useState('');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const handleCheckout = async (plan: 'pro' | 'enterprise') => {
-    if (!user) {
-      router.push('/auth?redirect=/pricing');
-      return;
-    }
-    
-    if (plan === 'enterprise') {
-        router.push('/contact');
-        return;
-    }
-    
-    setLoading(plan);
-    
-    try {
-      // This is a placeholder for Stripe integration
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast({
-        title: "Redirecting to checkout...",
-        description: "This is a demo and will not process a real payment.",
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
       });
-      setLoading(null);
-      // In a real app, you would fetch a checkout URL from your backend
-      // const response = await fetch('/api/checkout', { ... });
-      // const { url } = await response.json();
-      // router.push(url);
-
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: "Error",
-        description: "Could not start checkout process."
-      });
-      setLoading(null);
+    }
+  }, [messages]);
+  
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newMessage.trim()) {
+      onSendMessage(newMessage);
+      setNewMessage('');
     }
   };
   
-  const handleGetStarted = () => {
-    router.push('/auth');
-  };
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 flex items-center justify-between h-20 px-4 md:px-8 bg-background/80 backdrop-blur-sm border-b">
-        <h1 className="font-headline text-3xl font-bold text-primary">
-          <Link href="/">Connect Now</Link>
-        </h1>
-        <Button variant="secondary" asChild>
-          <Link href="/">Back to Home</Link>
-        </Button>
+    <div className="flex h-full flex-col">
+      <header className="border-b p-4">
+        <h2 className="text-xl font-bold">In-Call Chat</h2>
       </header>
-      <main className="flex-1 py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="font-headline text-5xl md:text-6xl font-bold">Simple, transparent pricing</h2>
-            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-              Choose the plan that's right for your team. No hidden fees.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 justify-center items-start gap-8">
-            <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline text-3xl">Free</CardTitle>
-                <CardDescription>Perfect for personal use and small teams.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-5xl font-bold">
-                  $0
+      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <div className="space-y-4">
+          {messages.map((msg) => {
+            const isLocal = msg.userId === localUserId;
+            return (
+              <div
+                key={msg.id}
+                className={cn('flex items-start gap-3', isLocal && 'flex-row-reverse')}
+              >
+                <Avatar className="h-8 w-8">
+                    <AvatarFallback>{getInitials(msg.name)}</AvatarFallback>
+                </Avatar>
+                <div className={cn(
+                    "flex flex-col rounded-lg p-3 max-w-[75%]",
+                     isLocal ? "bg-primary text-primary-foreground" : "bg-muted"
+                )}>
+                   <div className="flex items-baseline gap-2">
+                     <p className="text-xs font-bold">{isLocal ? 'You' : msg.name}</p>
+                     <p className={cn("text-xs", isLocal ? "text-primary-foreground/70" : "text-muted-foreground/70")}>
+                        {msg.timestamp ? formatDistanceToNow(msg.timestamp.toDate(), { addSuffix: true }) : 'sending...'}
+                     </p>
+                   </div>
+                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                 </div>
-                <ul className="space-y-3 text-muted-foreground">
-                  {freeFeatures.map((feature) => (
-                    <li key={feature} className="flex items-center gap-3">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" size="lg" variant="outline" onClick={handleGetStarted}>
-                   Get Started
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-2xl border-primary border-2 relative overflow-hidden">
-               <Badge variant="secondary" className="absolute top-4 right-4 bg-primary text-primary-foreground">Best Value</Badge>
-              <CardHeader>
-                <CardTitle className="font-headline text-3xl">Pro</CardTitle>
-                <CardDescription>For growing teams that need more power and support.</CardDescription>
-              </ACardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-5xl font-bold">
-                  $25 <span className="text-lg font-medium text-muted-foreground">/ user / month</span>
-                </div>
-                <ul className="space-y-3 text-muted-foreground">
-                  {proFeatures.map((feature) => (
-                    <li key={feature} className="flex items-center gap-3">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" size="lg" onClick={() => handleCheckout('pro')} disabled={loading === 'pro'}>
-                   {loading === 'pro' ? <Loader2 className="animate-spin" /> : 'Choose Pro'}
-                </Button>
-              </CardFooter>
-            </Card>
-            
-            <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline text-3xl">Enterprise</CardTitle>
-                <CardDescription>For large organizations with specific needs.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                 <div className="text-5xl font-bold">
-                  Custom
-                </div>
-                 <ul className="space-y-3 text-muted-foreground">
-                  {enterpriseFeatures.map((feature, index) => (
-                    <li key={feature} className="flex items-center gap-3">
-                      <Check className={cn("h-5 w-5 text-primary", index === 0 && "opacity-0")} />
-                      <span className={cn(index === 0 && "font-bold text-foreground")}>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" size="lg" onClick={() => handleCheckout('enterprise')} disabled={loading === 'enterprise'}>
-                   {loading === 'enterprise' ? <Loader2 className="animate-spin" /> : 'Contact Sales'}
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+              </div>
+            );
+          })}
         </div>
-      </main>
-      <footer className="py-8 border-t bg-secondary/30">
-        <div className="container mx-auto px-4 text-center text-muted-foreground">
-           <div className="flex justify-center gap-4 mb-2">
-            <Link href="/legal" className="text-sm hover:underline">Legal Information</Link>
-            <Link href="/terms" className="text-sm hover:underline">Terms of Use</Link>
-            <Link href="/contact" className="text-sm hover:underline">Contact Support</Link>
-          </div>
-          <p>&copy; {new Date().getFullYear()} Connect Now. All rights reserved.</p>
+      </ScrollArea>
+      <form onSubmit={handleSendMessage} className="border-t p-4">
+        <div className="relative">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="pr-12"
+          />
+          <Button
+            type="submit"
+            size="icon"
+            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+            disabled={!newMessage.trim()}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
-      </footer>
+      </form>
     </div>
   );
 }
