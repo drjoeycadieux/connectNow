@@ -13,6 +13,14 @@ import Link from "next/link";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
+const freeFeatures = [
+  "Up to 3 Participants",
+  "30 Minute Meeting Limit",
+  "End-to-End Encryption",
+  "Standard Video Quality",
+  "Community Support",
+];
+
 const monthlyFeatures = [
   "Up to 5 Participants",
   "Up to 6 Meetings per Month",
@@ -84,6 +92,16 @@ export default function PricingPage() {
       setLoading(null);
     }
   };
+  
+  const handleGetStarted = () => {
+    if (!user) {
+      router.push('/auth');
+    } else {
+      const newRoomId = crypto.randomUUID().substring(0, 8);
+      const userName = user.displayName || user.email?.split('@')[0] || 'User';
+      router.push(`/room/${newRoomId}?name=${encodeURIComponent(userName)}`);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -103,8 +121,34 @@ export default function PricingPage() {
               Choose the plan that's right for your team. No hidden fees.
             </p>
           </div>
-          <div className="flex flex-col lg:flex-row justify-center items-start gap-8">
-            <Card className="w-full max-w-md shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-3 justify-center items-start gap-8">
+            <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-lg">
+              <CardHeader>
+                <CardTitle className="font-headline text-3xl">Free</CardTitle>
+                <CardDescription>Perfect for personal use and trying out Connect Now.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-5xl font-bold">
+                  $0
+                </div>
+                <ul className="space-y-3 text-muted-foreground">
+                  {freeFeatures.map((feature) => (
+                    <li key={feature} className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-primary" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button className="w-full" size="lg" variant="outline" onClick={handleGetStarted}>
+                   Get Started
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-2xl border-primary border-2 relative overflow-hidden">
+               <Badge variant="secondary" className="absolute top-4 right-4 bg-primary text-primary-foreground">Best Value</Badge>
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Monthly</CardTitle>
                 <CardDescription>Perfect for getting started and short-term projects.</CardDescription>
@@ -129,8 +173,7 @@ export default function PricingPage() {
               </CardFooter>
             </Card>
             
-            <Card className="w-full max-w-md shadow-2xl border-primary border-2 relative overflow-hidden">
-               <Badge variant="secondary" className="absolute top-4 right-4 bg-primary text-primary-foreground">Best Value</Badge>
+            <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Yearly</CardTitle>
                 <CardDescription>Save over 12% and unlock premium features.</CardDescription>
