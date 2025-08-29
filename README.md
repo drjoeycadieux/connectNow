@@ -1,4 +1,6 @@
-![My image](https://connect-now-phi.vercel.app/assets/qr-code.png)
+<div align="center">
+<img src="./src/assets/qr-code.png" alt="QR Code" width="200" height="200">
+</div>
 
 
 
