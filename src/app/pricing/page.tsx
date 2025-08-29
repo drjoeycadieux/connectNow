@@ -14,38 +14,32 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const freeFeatures = [
-  "Up to 3 Participants",
-  "45 Minute Meeting Limit",
-  "End-to-End Encryption",
-  "Standard Video Quality",
+  "Up to 10 Participants",
+  "End-to-End Encrypted Chat",
+  "File Sharing",
   "Community Support",
 ];
 
-const monthlyFeatures = [
-  "Up to 5 Participants",
-  "Up to 6 Meetings per Month",
-  "End-to-End Encryption",
-  "High-Quality Video & Audio",
-  "Screen Sharing",
-  "Secure Chat",
-  "Standard Email Support",
+const proFeatures = [
+  "Unlimited Participants",
+  "Priority Email Support",
+  "Team Management Dashboard",
+  "Custom Integrations",
 ];
 
-const yearlyFeatures = [
-  "Everything in Monthly, plus:",
-  "Unlimited Meetings",
-  "Up to 50 Participants",
-  "Custom Domain",
+const enterpriseFeatures = [
+  "Everything in Pro, plus:",
+  "Dedicated Onboarding",
   "24/7 Priority Support",
   "Audit Logs & Compliance",
-  "Dedicated Onboarding",
+  "On-premise Deployment Option",
 ];
 
 
 export default function PricingPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [loading, setLoading] = useState<'monthly' | 'yearly' | null>(null);
+  const [loading, setLoading] = useState<'pro' | 'enterprise' | null>(null);
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
   useState(() => {
@@ -54,53 +48,44 @@ export default function PricingPage() {
     });
   });
 
-  const handleCheckout = async (plan: 'monthly' | 'yearly') => {
+  const handleCheckout = async (plan: 'pro' | 'enterprise') => {
     if (!user) {
       router.push('/auth?redirect=/pricing');
       return;
     }
     
+    if (plan === 'enterprise') {
+        router.push('/contact');
+        return;
+    }
+    
     setLoading(plan);
     
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ plan: plan, userId: user.uid }),
+      // This is a placeholder for Stripe integration
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast({
+        title: "Redirecting to checkout...",
+        description: "This is a demo and will not process a real payment.",
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create checkout session.');
-      }
-
-      const { url } = await response.json();
-      if (url) {
-        router.push(url);
-      } else {
-        throw new Error('Checkout URL not found.');
-      }
+      setLoading(null);
+      // In a real app, you would fetch a checkout URL from your backend
+      // const response = await fetch('/api/checkout', { ... });
+      // const { url } = await response.json();
+      // router.push(url);
 
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: "Payment Error",
-        description: error.message || "There was a problem processing your payment. Please try again."
+        title: "Error",
+        description: "Could not start checkout process."
       });
       setLoading(null);
     }
   };
   
   const handleGetStarted = () => {
-    if (!user) {
-      router.push('/auth');
-    } else {
-      const newRoomId = crypto.randomUUID().substring(0, 8);
-      const userName = user.displayName || user.email?.split('@')[0] || 'User';
-      router.push(`/room/${newRoomId}?name=${encodeURIComponent(userName)}`);
-    }
+    router.push('/auth');
   };
 
   return (
@@ -125,7 +110,7 @@ export default function PricingPage() {
             <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Free</CardTitle>
-                <CardDescription>Perfect for personal use and trying out Connect Now.</CardDescription>
+                <CardDescription>Perfect for personal use and small teams.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="text-5xl font-bold">
@@ -150,15 +135,15 @@ export default function PricingPage() {
             <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-2xl border-primary border-2 relative overflow-hidden">
                <Badge variant="secondary" className="absolute top-4 right-4 bg-primary text-primary-foreground">Best Value</Badge>
               <CardHeader>
-                <CardTitle className="font-headline text-3xl">Monthly</CardTitle>
-                <CardDescription>Perfect for getting started and short-term projects.</CardDescription>
-              </CardHeader>
+                <CardTitle className="font-headline text-3xl">Pro</CardTitle>
+                <CardDescription>For growing teams that need more power and support.</CardDescription>
+              </ACardHeader>
               <CardContent className="space-y-6">
                 <div className="text-5xl font-bold">
-                  $19 <span className="text-lg font-medium text-muted-foreground">/ month</span>
+                  $25 <span className="text-lg font-medium text-muted-foreground">/ user / month</span>
                 </div>
                 <ul className="space-y-3 text-muted-foreground">
-                  {monthlyFeatures.map((feature) => (
+                  {proFeatures.map((feature) => (
                     <li key={feature} className="flex items-center gap-3">
                       <Check className="h-5 w-5 text-primary" />
                       <span>{feature}</span>
@@ -167,23 +152,23 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" size="lg" onClick={() => handleCheckout('monthly')} disabled={loading === 'monthly'}>
-                   {loading === 'monthly' ? <Loader2 className="animate-spin" /> : 'Choose Monthly'}
+                <Button className="w-full" size="lg" onClick={() => handleCheckout('pro')} disabled={loading === 'pro'}>
+                   {loading === 'pro' ? <Loader2 className="animate-spin" /> : 'Choose Pro'}
                 </Button>
               </CardFooter>
             </Card>
             
             <Card className="w-full max-w-md mx-auto lg:max-w-none shadow-lg">
               <CardHeader>
-                <CardTitle className="font-headline text-3xl">Yearly</CardTitle>
-                <CardDescription>Save over 12% and unlock premium features.</CardDescription>
+                <CardTitle className="font-headline text-3xl">Enterprise</CardTitle>
+                <CardDescription>For large organizations with specific needs.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="text-5xl font-bold">
-                  $199 <span className="text-lg font-medium text-muted-foreground">/ year</span>
+                 <div className="text-5xl font-bold">
+                  Custom
                 </div>
                  <ul className="space-y-3 text-muted-foreground">
-                  {yearlyFeatures.map((feature, index) => (
+                  {enterpriseFeatures.map((feature, index) => (
                     <li key={feature} className="flex items-center gap-3">
                       <Check className={cn("h-5 w-5 text-primary", index === 0 && "opacity-0")} />
                       <span className={cn(index === 0 && "font-bold text-foreground")}>{feature}</span>
@@ -192,8 +177,8 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" size="lg" onClick={() => handleCheckout('yearly')} disabled={loading === 'yearly'}>
-                   {loading === 'yearly' ? <Loader2 className="animate-spin" /> : 'Choose Yearly'}
+                <Button className="w-full" size="lg" onClick={() => handleCheckout('enterprise')} disabled={loading === 'enterprise'}>
+                   {loading === 'enterprise' ? <Loader2 className="animate-spin" /> : 'Contact Sales'}
                 </Button>
               </CardFooter>
             </Card>

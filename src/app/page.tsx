@@ -5,10 +5,8 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreateRoomForm } from "@/components/connect-now/CreateRoomForm";
-import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
-import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset, Info, X, AlertTriangle, Menu } from "lucide-react";
+import { Users, ShieldCheck, Zap, MessageSquare, HardDrive, Server, FileCheck2, Headset, Info, X, AlertTriangle, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -18,22 +16,6 @@ import { cn } from '@/lib/utils';
 import { UserProfile } from '@/components/connect-now/UserProfile';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
-
-function JoinRoomFormSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-1/4" />
-        <Skeleton className="h-12 w-full" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-1/4" />
-        <Skeleton className="h-12 w-full" />
-      </div>
-      <Skeleton className="h-11 w-full" />
-    </div>
-  )
-}
 
 function OutageBanner() {
   const [isVisible, setIsVisible] = useState(true);
@@ -73,7 +55,7 @@ function BetaBanner() {
       <Info className="h-4 w-4 !text-yellow-500" />
       <AlertTitle className="font-bold !text-yellow-400">Prototype Notice</AlertTitle>
       <AlertDescription className="!text-yellow-300/90">
-        The video calling feature is experimental and may not work reliably at all times. Your patience is appreciated!
+        This application is currently a prototype. Features may not work reliably at all times.
       </AlertDescription>
        <button
           onClick={() => setIsVisible(false)}
@@ -136,12 +118,11 @@ export default function Home() {
               The Secure Collaboration Platform for IT Professionals.
             </h2>
             <p className="max-w-xl text-lg md:text-xl text-muted-foreground animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              Reliable, end-to-end encrypted video conferencing designed for technical support, system administration, and incident response.
+              Reliable, end-to-end encrypted communication designed for technical support, system administration, and incident response.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              <CreateRoomForm />
-              <Button variant="outline" size="lg" asChild>
-                <a href="#join">Join a Session</a>
+              <Button size="lg" asChild>
+                <Link href="/auth">Get Started</Link>
               </Button>
             </div>
           </div>
@@ -178,20 +159,11 @@ export default function Home() {
               <Card className="text-center p-6 bg-card/50 border-0 shadow-lg">
                 <div className="flex justify-center mb-4">
                   <div className="bg-primary/10 text-primary p-4 rounded-full">
-                    <ScreenShareIcon className="h-8 w-8" />
-                  </div>
-                </div>
-                <h4 className="font-bold text-2xl mb-2">Remote Desktop</h4>
-                <p className="text-muted-foreground">Seamlessly view and troubleshoot remote systems with high-quality screen sharing.</p>
-              </Card>
-               <Card className="text-center p-6 bg-card/50 border-0 shadow-lg">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-primary/10 text-primary p-4 rounded-full">
                     <HardDrive className="h-8 w-8" />
                   </div>
                 </div>
-                <h4 className="font-bold text-2xl mb-2">Low-Latency HD Video</h4>
-                <p className="text-muted-foreground">Crisp, low-latency video and audio that keeps up with real-time technical walkthroughs.</p>
+                <h4 className="font-bold text-2xl mb-2">Reliable Infrastructure</h4>
+                <p className="text-muted-foreground">Crisp, low-latency communication that keeps up with real-time technical walkthroughs.</p>
               </Card>
               <Card className="text-center p-6 bg-card/50 border-0 shadow-lg">
                 <div className="flex justify-center mb-4">
@@ -220,40 +192,15 @@ export default function Home() {
                 <h4 className="font-bold text-2xl mb-2">Zero-Friction Access</h4>
                 <p className="text-muted-foreground">No downloads or installs for end-users. Just a simple link to join a support session.</p>
               </Card>
-            </div>
-          </div>
-        </section>
-
-        <section id="how-it-works" className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h3 className="font-headline text-4xl md:text-5xl font-bold">Get Connected in Three Steps</h3>
-              <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                Initiate a secure session with unparalleled ease and speed.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 text-center">
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary text-primary-foreground mb-6">
-                  <span className="font-headline text-4xl font-bold">1</span>
+               <Card className="text-center p-6 bg-card/50 border-0 shadow-lg">
+                 <div className="flex justify-center mb-4">
+                  <div className="bg-primary/10 text-primary p-4 rounded-full">
+                    <Server className="h-8 w-8" />
+                  </div>
                 </div>
-                <h4 className="font-bold text-2xl mb-2">Create a Room</h4>
-                <p className="text-muted-foreground">Generate a unique, secure session room with a single click.</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary text-primary-foreground mb-6">
-                  <span className="font-headline text-4xl font-bold">2</span>
-                </div>
-                <h4 className="font-bold text-2xl mb-2">Share the ID</h4>
-                <p className="text-muted-foreground">Securely send the Room ID to your colleague or the person you're supporting.</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary text-primary-foreground mb-6">
-                  <span className="font-headline text-4xl font-bold">3</span>
-                </div>
-                <h4 className="font-bold text-2xl mb-2">Connect Instantly</h4>
-                <p className="text-muted-foreground">They join instantly through their browser. No registration or installation needed.</p>
-              </div>
+                <h4 className="font-bold text-2xl mb-2">Dedicated Infrastructure</h4>
+                <p className="text-muted-foreground">Option for on-premise or private cloud deployment, ensuring data sovereignty and control.</p>
+              </Card>
             </div>
           </div>
         </section>
@@ -266,16 +213,7 @@ export default function Home() {
                 The enterprise-grade solution for secure and reliable IT communications.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="flex items-start gap-4">
-                <div className="bg-primary/10 text-primary p-3 rounded-full">
-                  <Server className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xl mb-1">Dedicated Infrastructure</h4>
-                  <p className="text-muted-foreground">Option for on-premise or private cloud deployment, ensuring data sovereignty and control.</p>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="flex items-start gap-4">
                 <div className="bg-primary/10 text-primary p-3 rounded-full">
                   <FileCheck2 className="h-6 w-6" />
@@ -297,30 +235,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        <section id="join" className="py-16 md:py-24">
-          <div className="container mx-auto px-4 flex justify-center">
-            <Card className="w-full max-w-lg bg-card/80 shadow-2xl backdrop-blur-lg border-0">
-              <CardHeader className="text-center">
-                <CardTitle className="font-headline text-4xl">Start a Secure Session</CardTitle>
-                <CardDescription className="text-lg">
-                  Create a new session or enter an existing Room ID to join.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-6 p-8">
-                <CreateRoomForm />
-                <div className="flex items-center gap-4">
-                  <Separator className="flex-1" />
-                  <span className="text-sm font-medium text-muted-foreground">OR</span>
-                  <Separator className="flex-1" />
-                </div>
-                <Suspense fallback={<JoinRoomFormSkeleton/>}>
-                  <JoinRoomForm />
-                </Suspense>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
       </main>
 
       <footer className="py-8 border-t bg-secondary/30">
@@ -331,12 +245,10 @@ export default function Home() {
             <Link href="/terms" className="text-sm hover:underline">Terms of Use</Link>
             <Link href="/contact" className="text-sm hover:underline">Contact Support</Link>
           </div>
-          <p>Secure WebRTC for IT Professionals</p>
+          <p>Secure Communication for IT Professionals</p>
           <p>&copy; {new Date().getFullYear()} Connect Now. All rights reserved.</p>
         </div>
       </footer>
     </div>
   );
 }
-
-    
