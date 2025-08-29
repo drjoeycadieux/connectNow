@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CreateRoomForm } from "@/components/connect-now/CreateRoomForm";
 import { JoinRoomForm } from "@/components/connect-now/JoinRoomForm";
 import { Separator } from "@/components/ui/separator";
-import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset, Info, X, AlertTriangle } from "lucide-react";
+import { Video, Users, ShieldCheck, Zap, MessageSquare, ScreenShare as ScreenShareIcon, HardDrive, Server, FileCheck2, Headset, Info, X, AlertTriangle, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -15,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
 import { UserProfile } from '@/components/connect-now/UserProfile';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 
 function JoinRoomFormSkeleton() {
@@ -94,7 +96,7 @@ export default function Home() {
         <h1 className="font-headline text-3xl font-bold text-primary">
           <Link href="/">Connect Now</Link>
         </h1>
-        <div className="flex items-center gap-4">
+        <nav className="hidden md:flex items-center gap-4">
           <Button variant="ghost" asChild>
             <Link href="/pricing">Pricing</Link>
           </Button>
@@ -102,6 +104,28 @@ export default function Home() {
             <Link href="/contact">Contact Support</Link>
           </Button>
           <UserProfile />
+        </nav>
+        <div className="md:hidden">
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                        <Menu className="h-6 w-6" />
+                        <span className="sr-only">Open menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px]">
+                    <nav className="flex flex-col gap-6 pt-12">
+                        <SheetClose asChild>
+                          <Link href="/pricing" className="text-lg font-medium hover:underline">Pricing</Link>
+                        </SheetClose>
+                        <SheetClose asChild>
+                           <Link href="/contact" className="text-lg font-medium hover:underline">Contact Support</Link>
+                        </SheetClose>
+                        <Separator />
+                        <UserProfile />
+                    </nav>
+                </SheetContent>
+            </Sheet>
         </div>
       </header>
 
@@ -314,3 +338,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

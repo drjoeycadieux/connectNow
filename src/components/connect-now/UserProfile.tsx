@@ -17,11 +17,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function UserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -44,7 +46,7 @@ export function UserProfile() {
     return (
       <Button variant="secondary" onClick={() => router.push('/auth')}>
         <LogIn className="mr-2 h-5 w-5 md:hidden" />
-        <span className="hidden md:inline">Login</span>
+        <span className="hidden md:inline">Login / Sign Up</span>
         <span className="md:hidden">Login</span>
       </Button>
     );
@@ -85,3 +87,5 @@ export function UserProfile() {
     </DropdownMenu>
   );
 }
+
+    
