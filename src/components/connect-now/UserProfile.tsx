@@ -42,7 +42,7 @@ export function UserProfile() {
 
   if (!user) {
     return (
-      <Button variant="secondary" size="lg" onClick={() => router.push('/auth')}>
+      <Button variant="secondary" onClick={() => router.push('/auth')}>
         <LogIn className="mr-2 h-5 w-5" />
         Login
       </Button>
