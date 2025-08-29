@@ -86,16 +86,18 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const participants = roomDocSnap.data().participants || {};
         const participantIds = Object.keys(participants);
 
-        if (participantIds.length <= 1) {
+        if (participantIds.length <= 1 && participantIds.includes(userId)) {
+            // I am the last one, delete the whole room
             const batch = writeBatch(db);
             
             const iceCandidatesCollectionRef = collection(roomRef, 'iceCandidates');
             const iceCandidatesSnap = await getDocs(iceCandidatesCollectionRef);
-            iceCandidatesSnap.forEach(doc => {
-                const candidatesSubCollectionRef = collection(doc.ref, 'candidates');
-                getDocs(candidatesSubCollectionRef).then(snap => snap.forEach(subDoc => batch.delete(subDoc.ref)));
-                batch.delete(doc.ref)
-            });
+            for (const userIceDoc of iceCandidatesSnap.docs) {
+                 const candidatesSubCollectionRef = collection(userIceDoc.ref, 'candidates');
+                 const candidatesSnap = await getDocs(candidatesSubCollectionRef);
+                 candidatesSnap.forEach(subDoc => batch.delete(subDoc.ref));
+                 batch.delete(userIceDoc.ref);
+            }
 
             const messagesRef = collection(roomRef, 'messages');
             const messagesSnap = await getDocs(messagesRef);
@@ -105,6 +107,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             await batch.commit();
 
         } else {
+            // Just leave the room
             const updates: {[key:string]: any} = {};
             updates[`participants.${userId}`] = deleteField();
             updates[`offers.${userId}`] = deleteField();
@@ -310,9 +313,9 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
         const allParticipants = data.participants;
         const remoteParticipants = Object.keys(allParticipants).filter((pId: string) => pId !== userId);
 
-        // Call new participants
+        // Call new participants (I am the caller)
         for (const remoteUserId of remoteParticipants) {
-          if (!pcs.current.has(remoteUserId)) {
+          if (!pcs.current.has(remoteUserId) && userId < remoteUserId) { // Simple "caller" election
              const pc = createPeerConnection(remoteUserId, allParticipants[remoteUserId]);
              const offer = await pc.createOffer();
              await pc.setLocalDescription(offer);
@@ -322,7 +325,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
           }
         }
         
-        // Handle offers meant for me
+        // Handle offers meant for me (I am the callee)
         const offers = data.offers || {};
         for (const offererId in offers) {
             if (offers[offererId].to === userId) {
@@ -343,7 +346,7 @@ export const useWebRTC = (roomId: string | null, localUserName: string) => {
             }
         }
 
-        // Handle answers meant for me
+        // Handle answers meant for me (I was the caller)
         const answers = data.answers || {};
         for (const answererId in answers) {
             if (answers[answererId].to === userId) {
