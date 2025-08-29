@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { QrCode } from "@/components/connect-now/QrCode";
 
 export default function LegalPage() {
   return (
@@ -46,6 +47,9 @@ export default function LegalPage() {
       </main>
       <footer className="py-8 border-t bg-secondary/30">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
+           <div className="flex justify-center mb-4">
+            <QrCode />
+          </div>
            <div className="flex justify-center gap-4 mb-2">
             <Link href="/legal" className="text-sm hover:underline">Legal Information</Link>
             <Link href="/terms" className="text-sm hover:underline">Terms of Use</Link>

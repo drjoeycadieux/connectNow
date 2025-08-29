@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail } from "lucide-react";
 import Link from "next/link";
+import { QrCode } from "@/components/connect-now/QrCode";
 
 export default function ContactPage() {
   return (
@@ -45,6 +46,9 @@ export default function ContactPage() {
       </main>
       <footer className="py-8 border-t bg-secondary/30">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
+          <div className="flex justify-center mb-4">
+            <QrCode />
+          </div>
           <p>&copy; {new Date().getFullYear()} Connect Now. All rights reserved.</p>
         </div>
       </footer>
