@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 const freeFeatures = [
   "Up to 3 Participants",
-  "30 Minute Meeting Limit",
+  "45 Minute Meeting Limit",
   "End-to-End Encryption",
   "Standard Video Quality",
   "Community Support",
