@@ -43,8 +43,9 @@ export function UserProfile() {
   if (!user) {
     return (
       <Button variant="secondary" onClick={() => router.push('/auth')}>
-        <LogIn className="mr-2 h-5 w-5" />
-        Login
+        <LogIn className="mr-2 h-5 w-5 md:hidden" />
+        <span className="hidden md:inline">Login</span>
+        <span className="md:hidden">Login</span>
       </Button>
     );
   }
