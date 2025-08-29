@@ -15,7 +15,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
 import { UserProfile } from '@/components/connect-now/UserProfile';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { QrCode } from '@/components/connect-now/QrCode';
 
 
 function OutageBanner() {
@@ -203,9 +202,6 @@ export default function Home() {
 
       <footer className="py-8 border-t bg-secondary/30">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <div className="flex justify-center mb-4">
-            <QrCode />
-          </div>
           <p className="font-semibold text-lg mb-2">Connect Now</p>
           <div className="flex justify-center gap-4 mb-2">
             <Link href="/legal" className="text-sm hover:underline">Legal Information</Link>
