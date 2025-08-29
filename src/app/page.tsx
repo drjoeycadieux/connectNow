@@ -80,9 +80,6 @@ export default function Home() {
         </h1>
         <nav className="hidden md:flex items-center gap-4">
           <Button variant="ghost" asChild>
-            <Link href="/pricing">Pricing</Link>
-          </Button>
-          <Button variant="ghost" asChild>
             <Link href="/contact">Contact Support</Link>
           </Button>
           <UserProfile />
@@ -97,9 +94,6 @@ export default function Home() {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[280px]">
                     <nav className="flex flex-col gap-6 pt-12">
-                        <SheetClose asChild>
-                          <Link href="/pricing" className="text-lg font-medium hover:underline">Pricing</Link>
-                        </SheetClose>
                         <SheetClose asChild>
                            <Link href="/contact" className="text-lg font-medium hover:underline">Contact Support</Link>
                         </SheetClose>
@@ -201,37 +195,6 @@ export default function Home() {
                 <h4 className="font-bold text-2xl mb-2">Dedicated Infrastructure</h4>
                 <p className="text-muted-foreground">Option for on-premise or private cloud deployment, ensuring data sovereignty and control.</p>
               </Card>
-            </div>
-          </div>
-        </section>
-
-        <section id="why-us" className="py-16 md:py-24 bg-secondary/50">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h3 className="font-headline text-4xl md:text-5xl font-bold">Why Connect Now?</h3>
-              <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                The enterprise-grade solution for secure and reliable IT communications.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="flex items-start gap-4">
-                <div className="bg-primary/10 text-primary p-3 rounded-full">
-                  <FileCheck2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xl mb-1">Compliance-Ready</h4>
-                  <p className="text-muted-foreground">Designed to meet strict regulatory requirements, including audit logs and data retention policies.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="bg-primary/10 text-primary p-3 rounded-full">
-                  <Headset className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xl mb-1">24/7 Priority Support</h4>
-                  <p className="text-muted-foreground">Get expert help whenever you need it with our dedicated enterprise support team.</p>
-                </div>
-              </div>
             </div>
           </div>
         </section>
