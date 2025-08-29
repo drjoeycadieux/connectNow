@@ -38,7 +38,6 @@ export default function ProfilePage() {
                 setUserData(data);
                 setCustomDomain(data.customDomain || '');
             }
-            setLoading(false);
         }).catch(error => {
             console.error("Error fetching user data:", error);
             toast({
@@ -46,7 +45,8 @@ export default function ProfilePage() {
                 title: 'Error',
                 description: 'Could not load your profile data.',
             });
-            setLoading(false);
+        }).finally(() => {
+             setLoading(false);
         });
       } else {
         router.push('/auth');
