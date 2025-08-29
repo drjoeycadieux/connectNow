@@ -19,32 +19,39 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<DocumentData | null>(null);
   const [displayName, setDisplayName] = useState('');
-  const [customDomain, setCustomDomain] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setDisplayName(currentUser.displayName || '');
         
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserData(data);
-            setCustomDomain(data.customDomain || '');
-        }
+        getDoc(userDocRef).then(userDoc => {
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                setUserData(data);
+            }
+        }).catch(error => {
+            console.error("Error fetching user data:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not load your profile data.',
+            });
+        }).finally(() => {
+             setLoading(false);
+        });
       } else {
         router.push('/auth');
       }
-      setLoading(false);
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [router, toast]);
 
   const handleUpdateProfile = async () => {
     if (!user) return;
@@ -58,17 +65,6 @@ export default function ProfilePage() {
         return;
     }
     
-    // Simple domain validation
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
-    if (customDomain && !domainRegex.test(customDomain)) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Domain',
-        description: 'Please enter a valid domain name.',
-      });
-      return;
-    }
-
     setSaving(true);
     try {
       if (user.displayName !== displayName) {
@@ -78,7 +74,6 @@ export default function ProfilePage() {
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, { 
           displayName,
-          customDomain: customDomain || null,
       });
 
       toast({
@@ -96,9 +91,6 @@ export default function ProfilePage() {
       setSaving(false);
     }
   };
-
-  const isYearlyPlan = userData?.plan === 'yearly';
-
 
   if (loading) {
     return (
@@ -122,17 +114,6 @@ export default function ProfilePage() {
                             <div className="space-y-2">
                                <Skeleton className="h-4 w-1/4" />
                                <Skeleton className="h-10 w-full" />
-                            </div>
-                             <div className="space-y-2">
-                               <Skeleton className="h-4 w-1/4" />
-                               <Skeleton className="h-10 w-full" />
-                            </div>
-                        </div>
-                        <Separator />
-                        <div className="space-y-4">
-                             <div className="space-y-2">
-                               <Skeleton className="h-6 w-1/3" />
-                               <Skeleton className="h-4 w-2/3" />
                             </div>
                              <div className="space-y-2">
                                <Skeleton className="h-4 w-1/4" />
@@ -186,34 +167,6 @@ export default function ProfilePage() {
                   />
                 </div>
             </div>
-
-            <Separator />
-            
-            <div className="space-y-4">
-                 <CardHeader className="p-0">
-                    <CardTitle className="text-xl">Custom Domain</CardTitle>
-                    <CardDescription>
-                        {isYearlyPlan ? 'Use your own domain for meeting links.' : 'Upgrade to the yearly plan to use a custom domain.'}
-                    </CardDescription>
-                </CardHeader>
-                <div className="space-y-2">
-                  <Label htmlFor="customDomain">Your Domain</Label>
-                   <Input
-                    id="customDomain"
-                    type="text"
-                    value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
-                    placeholder="e.g., meet.yourcompany.com"
-                    disabled={!isYearlyPlan || saving}
-                  />
-                  {isYearlyPlan && customDomain && (
-                      <p className="text-sm text-muted-foreground">
-                          To complete setup, create a CNAME record in your DNS provider pointing <code className="bg-muted px-1 py-0.5 rounded">{customDomain}</code> to <code className="bg-muted px-1 py-0.5 rounded">connectnow.example.com</code>.
-                      </p>
-                  )}
-                </div>
-            </div>
-
           </CardContent>
           <CardFooter>
              <Button onClick={handleUpdateProfile} disabled={saving} className="w-full md:w-auto">

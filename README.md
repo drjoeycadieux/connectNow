@@ -1,3 +1,8 @@
+![My image](https://connect-now-phi.vercel.app/assets/qr-code.png)
+
+
+
+
 # Connect Now - Secure Video Conferencing Platform
 
 Connect Now is a modern, secure video conferencing application designed for real-time communication. It is built with a robust, modern technology stack and focuses on providing a seamless and secure experience for IT professionals, support teams, and general users.
